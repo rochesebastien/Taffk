@@ -1,0 +1,28 @@
+[package]
+name = "gdidiot"
+version = "0.0.1"
+description = "Local notes spotlight"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "gdidiot_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ignore = "0.4"
+memchr = "2"
+dirs = "5"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
