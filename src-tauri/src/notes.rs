@@ -37,11 +37,7 @@ impl NotesStore {
                 continue;
             }
             let path = entry.path();
-            let is_target = matches!(
-                path.extension().and_then(|e| e.to_str()),
-                Some("md") | Some("txt")
-            );
-            if !is_target {
+            if !is_target_file(path) {
                 continue;
             }
             if let Ok(content) = std::fs::read_to_string(path) {
@@ -54,4 +50,34 @@ impl NotesStore {
 
         *self.notes.write().unwrap() = loaded;
     }
+
+    pub fn upsert_from_disk(&self, path: &Path) {
+        if !is_target_file(path) {
+            return;
+        }
+        let Ok(content) = std::fs::read_to_string(path) else {
+            return;
+        };
+        let mut notes = self.notes.write().unwrap();
+        if let Some(existing) = notes.iter_mut().find(|n| n.path == path) {
+            existing.content = content;
+        } else {
+            notes.push(Note {
+                path: path.to_path_buf(),
+                content,
+            });
+        }
+    }
+
+    pub fn remove(&self, path: &Path) {
+        let mut notes = self.notes.write().unwrap();
+        notes.retain(|n| n.path != path);
+    }
+}
+
+pub fn is_target_file(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some("md") | Some("txt")
+    )
 }
