@@ -63,29 +63,44 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="bar">
-  <input
-    class="search"
-    type="text"
-    placeholder="Rechercher…"
-    value={query}
-    oninput={onInput}
-    autofocus
-  />
-  <span class="mode-badge mode-{mode}" title="Ctrl+L pour basculer">
-    {mode === 'literal' ? 'lit' : 'fuzz'}
-  </span>
-</div>
+<main class="shell">
+  <div class="bar">
+    <input
+      class="search"
+      type="text"
+      placeholder="Search notes…"
+      value={query}
+      oninput={onInput}
+      autofocus
+      spellcheck="false"
+      autocomplete="off"
+    />
+    <span class="mode-badge mode-{mode}" title="Ctrl+L pour basculer">
+      {mode === 'literal' ? 'lit' : 'fuzz'}
+    </span>
+  </div>
 
-{#if query && results.length === 0}
-  <div class="empty">Aucun résultat.</div>
-{/if}
+  {#if query && results.length === 0}
+    <div class="empty">No results for "{query}"</div>
+  {/if}
 
-<ul class="results">
-  {#each results as r (r.path)}
-    <li>
-      <div class="path">{r.path}</div>
-      <div class="snippet">{@html highlight(r.snippet, r.match_ranges)}</div>
-    </li>
-  {/each}
-</ul>
+  {#if results.length > 0}
+    <ul class="results">
+      {#each results as r (r.path)}
+        <li>
+          <div class="path">{r.path}</div>
+          <div class="snippet">{@html highlight(r.snippet, r.match_ranges)}</div>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+
+  <div class="hint">
+    <span class="key-group">
+      <kbd>Ctrl</kbd>
+      <span class="sep">+</span>
+      <kbd>L</kbd>
+      <span>toggle mode</span>
+    </span>
+  </div>
+</main>
