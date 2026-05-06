@@ -73,6 +73,12 @@ body {
   padding: 0 24px 64px;
   flex: 1;
   animation: rise 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: max-width 220ms ease, margin-top 220ms ease;
+}
+
+.shell.has-editor {
+  max-width: 920px;
+  margin-top: 6vh;
 }
 
 @keyframes rise {
@@ -160,18 +166,32 @@ input.search::placeholder {
 
 .results li {
   display: block;
-  padding: 12px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 120ms ease;
+  padding: 0;
 }
 
 .results li + li {
   margin-top: 1px;
 }
 
-.results li:hover {
+.result-button {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  transition: background-color 120ms ease;
+}
+
+.result-button:hover,
+.result-button:focus-visible {
   background: var(--surface-hover);
+  outline: none;
 }
 
 .path {
@@ -213,6 +233,68 @@ input.search::placeholder {
   border-radius: var(--radius-card);
   font-size: 13px;
   letter-spacing: 0.005em;
+}
+
+.editor-pane {
+  margin: 12px 0 0 0;
+  background: var(--surface);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.editor-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.save-indicator {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-whisper);
+  transition: color 200ms ease;
+  min-width: 70px;
+  text-align: right;
+  user-select: none;
+}
+
+.save-indicator.save-saving {
+  color: var(--text-faint);
+}
+
+.save-indicator.save-saved {
+  color: var(--accent);
+}
+
+.editor-body {
+  flex: 1;
+  min-height: 480px;
+  max-height: 70vh;
+  overflow: hidden;
 }
 
 .hint {

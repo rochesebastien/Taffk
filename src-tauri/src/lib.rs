@@ -43,7 +43,11 @@ pub fn run() {
                 .build(),
         )
         .manage(store)
-        .invoke_handler(tauri::generate_handler![commands::search])
+        .invoke_handler(tauri::generate_handler![
+            commands::search,
+            commands::get_note,
+            commands::save_note,
+        ])
         .setup(move |app| {
             app.global_shortcut().register(toggle_shortcut)?;
             build_tray(app.handle())?;

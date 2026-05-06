@@ -20,6 +20,23 @@ pub struct Note {
     pub frontmatter: Frontmatter,
 }
 
+#[derive(Serialize, Clone)]
+pub struct NoteDto {
+    pub path: String,
+    pub content: String,
+    pub frontmatter: Frontmatter,
+}
+
+impl From<&Note> for NoteDto {
+    fn from(n: &Note) -> Self {
+        Self {
+            path: n.path.to_string_lossy().into_owned(),
+            content: n.content.clone(),
+            frontmatter: n.frontmatter.clone(),
+        }
+    }
+}
+
 impl Note {
     pub fn from_disk(path: PathBuf, content: String) -> Self {
         let (frontmatter, body) = parse_frontmatter(&content);
