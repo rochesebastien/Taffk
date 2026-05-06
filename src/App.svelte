@@ -1,20 +1,33 @@
 <script lang="ts">
-  import { search, type Match } from './lib/api';
+  import { search, type Match, type SearchMode } from './lib/api';
 
   let query = $state('');
+  let mode = $state<SearchMode>('literal');
   let results = $state<Match[]>([]);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  function onInput(e: Event) {
-    query = (e.target as HTMLInputElement).value;
+  function runSearch() {
     if (timer) clearTimeout(timer);
     timer = setTimeout(async () => {
       if (!query) {
         results = [];
         return;
       }
-      results = await search(query);
+      results = await search(query, mode);
     }, 50);
+  }
+
+  function onInput(e: Event) {
+    query = (e.target as HTMLInputElement).value;
+    runSearch();
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      mode = mode === 'literal' ? 'fuzzy' : 'literal';
+      runSearch();
+    }
   }
 
   function escapeHtml(s: string): string {
@@ -27,10 +40,18 @@
   function highlight(text: string, ranges: [number, number][]): string {
     if (ranges.length === 0) return escapeHtml(text);
     const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+    const merged: [number, number][] = [];
+    for (const [s, e] of sorted) {
+      const last = merged[merged.length - 1];
+      if (last && s <= last[1]) {
+        last[1] = Math.max(last[1], e);
+      } else {
+        merged.push([s, e]);
+      }
+    }
     let out = '';
     let cursor = 0;
-    for (const [start, end] of sorted) {
-      if (start < cursor) continue;
+    for (const [start, end] of merged) {
       out += escapeHtml(text.slice(cursor, start));
       out += '<mark>' + escapeHtml(text.slice(start, end)) + '</mark>';
       cursor = end;
@@ -40,14 +61,21 @@
   }
 </script>
 
-<input
-  class="search"
-  type="text"
-  placeholder="Rechercher dans ~/notes…"
-  value={query}
-  oninput={onInput}
-  autofocus
-/>
+<svelte:window onkeydown={onKeydown} />
+
+<div class="bar">
+  <input
+    class="search"
+    type="text"
+    placeholder="Rechercher…"
+    value={query}
+    oninput={onInput}
+    autofocus
+  />
+  <span class="mode-badge mode-{mode}" title="Ctrl+L pour basculer">
+    {mode === 'literal' ? 'lit' : 'fuzz'}
+  </span>
+</div>
 
 {#if query && results.length === 0}
   <div class="empty">Aucun résultat.</div>

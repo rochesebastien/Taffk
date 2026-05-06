@@ -3,7 +3,11 @@ use crate::search::{search as run_search, Match, SearchMode};
 use tauri::State;
 
 #[tauri::command]
-pub fn search(query: String, state: State<'_, NotesStore>) -> Vec<Match> {
+pub fn search(query: String, mode: String, state: State<'_, NotesStore>) -> Vec<Match> {
+    let mode = match mode.as_str() {
+        "fuzzy" => SearchMode::Fuzzy,
+        _ => SearchMode::Literal,
+    };
     let notes = state.notes.read().unwrap();
-    run_search(&query, notes.as_slice(), SearchMode::Literal)
+    run_search(&query, notes.as_slice(), mode)
 }

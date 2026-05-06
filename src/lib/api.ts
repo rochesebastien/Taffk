@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 
+export type SearchMode = 'literal' | 'fuzzy';
+
 export type Match = {
   path: string;
   score: number;
@@ -8,6 +10,6 @@ export type Match = {
   match_ranges: [number, number][];
 };
 
-export function search(query: string): Promise<Match[]> {
-  return invoke<Match[]>('search', { query });
+export function search(query: string, mode: SearchMode): Promise<Match[]> {
+  return invoke<Match[]>('search', { query, mode });
 }
