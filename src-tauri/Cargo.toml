@@ -22,6 +22,7 @@ memchr = "2"
 nucleo-matcher = "0.3"
 notify = "6"
 notify-debouncer-full = "0.3"
+serde_yaml = "0.9"
 
 [profile.release]
 codegen-units = 1

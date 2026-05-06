@@ -1,5 +1,6 @@
 mod commands;
 mod notes;
+mod query;
 mod search;
 mod watcher;
 

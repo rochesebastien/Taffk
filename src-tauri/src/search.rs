@@ -1,10 +1,12 @@
 use crate::notes::Note;
+use crate::query::{self, Filter};
 use memchr::memmem;
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use serde::Serialize;
 
 const SNIPPET_RADIUS: usize = 60;
+const FILTER_ONLY_SNIPPET_BYTES: usize = 140;
 const FILENAME_BOOST: f32 = 1.5;
 
 #[derive(Serialize, Clone)]
@@ -25,28 +27,42 @@ pub enum SearchMode {
 }
 
 pub fn search(query: &str, notes: &[Note], mode: SearchMode) -> Vec<Match> {
-    if query.is_empty() {
+    let parsed = query::parse(query);
+
+    if parsed.free_text.is_empty() && parsed.filters.is_empty() {
         return Vec::new();
     }
+
+    if parsed.free_text.is_empty() {
+        return notes
+            .iter()
+            .filter(|n| query::matches_filters(n, &parsed.filters))
+            .map(filter_only_match)
+            .collect();
+    }
+
     match mode {
-        SearchMode::Literal => search_literal(query, notes),
-        SearchMode::Fuzzy => search_fuzzy(query, notes),
+        SearchMode::Literal => search_literal(&parsed.free_text, notes, &parsed.filters),
+        SearchMode::Fuzzy => search_fuzzy(&parsed.free_text, notes, &parsed.filters),
     }
 }
 
-fn search_literal(query: &str, notes: &[Note]) -> Vec<Match> {
+fn search_literal(query: &str, notes: &[Note], filters: &[Filter]) -> Vec<Match> {
     let finder = memmem::Finder::new(query.as_bytes());
     let mut results = Vec::new();
 
     for note in notes {
-        let bytes = note.content.as_bytes();
+        if !filters.is_empty() && !query::matches_filters(note, filters) {
+            continue;
+        }
+        let bytes = note.body.as_bytes();
         let positions: Vec<usize> = finder.find_iter(bytes).collect();
         if positions.is_empty() {
             continue;
         }
         let first = positions[0];
-        let (s, e) = snippet_bounds(&note.content, first, query.len());
-        let snippet = &note.content[s..e];
+        let (s, e) = snippet_bounds(&note.body, first, query.len());
+        let snippet = &note.body[s..e];
         let match_ranges: Vec<(u32, u32)> = positions
             .iter()
             .filter(|&&p| p >= s && p + query.len() <= e)
@@ -71,7 +87,7 @@ fn search_literal(query: &str, notes: &[Note]) -> Vec<Match> {
     results
 }
 
-fn search_fuzzy(query: &str, notes: &[Note]) -> Vec<Match> {
+fn search_fuzzy(query: &str, notes: &[Note], filters: &[Filter]) -> Vec<Match> {
     let mut matcher = Matcher::new(Config::DEFAULT);
     let pattern = Pattern::parse(query, CaseMatching::Smart, Normalization::Smart);
 
@@ -82,6 +98,9 @@ fn search_fuzzy(query: &str, notes: &[Note]) -> Vec<Match> {
     let mut content_indices: Vec<u32> = Vec::new();
 
     for note in notes {
+        if !filters.is_empty() && !query::matches_filters(note, filters) {
+            continue;
+        }
         let filename = note
             .path
             .file_stem()
@@ -93,7 +112,7 @@ fn search_fuzzy(query: &str, notes: &[Note]) -> Vec<Match> {
         let name_score = pattern.indices(name_haystack, &mut matcher, &mut name_indices);
 
         content_indices.clear();
-        let content_haystack = Utf32Str::new(&note.content, &mut content_buf);
+        let content_haystack = Utf32Str::new(&note.body, &mut content_buf);
         let content_score = pattern.indices(content_haystack, &mut matcher, &mut content_indices);
 
         let name_combined = name_score.map(|s| s as f32 * FILENAME_BOOST).unwrap_or(0.0);
@@ -105,7 +124,7 @@ fn search_fuzzy(query: &str, notes: &[Note]) -> Vec<Match> {
         }
 
         let (snippet, match_ranges) = if !content_indices.is_empty() {
-            fuzzy_content_snippet(&note.content, &content_indices)
+            fuzzy_content_snippet(&note.body, &content_indices)
         } else {
             (
                 filename.to_string(),
@@ -127,6 +146,18 @@ fn search_fuzzy(query: &str, notes: &[Note]) -> Vec<Match> {
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     results
+}
+
+fn filter_only_match(note: &Note) -> Match {
+    let body = note.body.trim_start();
+    let target = body.len().min(FILTER_ONLY_SNIPPET_BYTES);
+    let end = floor_boundary(body, target);
+    Match {
+        path: note.path.to_string_lossy().into_owned(),
+        score: 0.0,
+        snippet: body[..end].to_string(),
+        match_ranges: Vec::new(),
+    }
 }
 
 fn fuzzy_content_snippet(content: &str, char_indices: &[u32]) -> (String, Vec<(u32, u32)>) {
