@@ -16,6 +16,28 @@
       results = await search(query);
     }, 50);
   }
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function highlight(text: string, ranges: [number, number][]): string {
+    if (ranges.length === 0) return escapeHtml(text);
+    const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+    let out = '';
+    let cursor = 0;
+    for (const [start, end] of sorted) {
+      if (start < cursor) continue;
+      out += escapeHtml(text.slice(cursor, start));
+      out += '<mark>' + escapeHtml(text.slice(start, end)) + '</mark>';
+      cursor = end;
+    }
+    out += escapeHtml(text.slice(cursor));
+    return out;
+  }
 </script>
 
 <input
@@ -35,7 +57,7 @@
   {#each results as r (r.path)}
     <li>
       <div class="path">{r.path}</div>
-      <div class="snippet">{r.snippet}</div>
+      <div class="snippet">{@html highlight(r.snippet, r.match_ranges)}</div>
     </li>
   {/each}
 </ul>

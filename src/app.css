@@ -46,6 +46,13 @@ ul.results li {
   word-break: break-word;
 }
 
+.snippet mark {
+  background: rgba(255, 220, 80, 0.45);
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
 .empty {
   margin: 16px 0;
   opacity: 0.6;

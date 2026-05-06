@@ -9,7 +9,10 @@ pub struct Match {
     pub path: String,
     pub score: f32,
     pub snippet: String,
-    pub match_ranges: Vec<(usize, usize)>,
+    /// UTF-16 code-unit offsets into `snippet` — directly usable by
+    /// JavaScript `String.prototype.slice`. Kept off the Rust byte
+    /// domain because JS strings are UTF-16.
+    pub match_ranges: Vec<(u32, u32)>,
 }
 
 #[derive(Clone, Copy)]
@@ -38,17 +41,24 @@ fn search_literal(query: &str, notes: &[Note]) -> Vec<Match> {
         }
         let first = positions[0];
         let (s, e) = snippet_bounds(&note.content, first, query.len());
-        let snippet = note.content[s..e].to_string();
-        let match_ranges: Vec<(usize, usize)> = positions
+        let snippet = &note.content[s..e];
+        let match_ranges: Vec<(u32, u32)> = positions
             .iter()
             .filter(|&&p| p >= s && p + query.len() <= e)
-            .map(|&p| (p - s, p - s + query.len()))
+            .map(|&p| {
+                let local_start = p - s;
+                let local_end = local_start + query.len();
+                (
+                    utf16_offset(snippet, local_start),
+                    utf16_offset(snippet, local_end),
+                )
+            })
             .collect();
 
         results.push(Match {
             path: note.path.to_string_lossy().into_owned(),
             score: 0.0,
-            snippet,
+            snippet: snippet.to_string(),
             match_ranges,
         });
     }
@@ -76,4 +86,8 @@ fn ceil_boundary(s: &str, mut i: usize) -> usize {
         i += 1;
     }
     i
+}
+
+fn utf16_offset(s: &str, byte_offset: usize) -> u32 {
+    s[..byte_offset].encode_utf16().count() as u32
 }
