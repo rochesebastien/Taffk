@@ -49,11 +49,12 @@ pub fn run() {
             commands::search,
             commands::get_note,
             commands::save_note,
+            commands::list_notes,
         ])
         .setup(move |app| {
             app.global_shortcut().register(toggle_shortcut)?;
             build_tray(app.handle())?;
-            watcher::spawn(store_for_watcher, &watcher_dir);
+            watcher::spawn(store_for_watcher, &watcher_dir, app.handle().clone());
             capture::spawn(capture_dir.clone());
             Ok(())
         })

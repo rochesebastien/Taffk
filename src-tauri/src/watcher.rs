@@ -5,8 +5,11 @@ use notify_debouncer_full::new_debouncer;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
+use tauri::{AppHandle, Emitter};
 
-pub fn spawn(store: Arc<NotesStore>, dir: &Path) {
+const NOTES_UPDATED_EVENT: &str = "notes-updated";
+
+pub fn spawn(store: Arc<NotesStore>, dir: &Path, app: AppHandle) {
     let dir = dir.to_path_buf();
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel();
@@ -23,6 +26,7 @@ pub fn spawn(store: Arc<NotesStore>, dir: &Path) {
         }
 
         for res in rx {
+            let mut changed = false;
             match res {
                 Ok(events) => {
                     for ev in events {
@@ -33,12 +37,14 @@ pub fn spawn(store: Arc<NotesStore>, dir: &Path) {
                             | EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
                                 for p in &ev.event.paths {
                                     store.upsert_from_disk(p);
+                                    changed = true;
                                 }
                             }
                             EventKind::Remove(_)
                             | EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
                                 for p in &ev.event.paths {
                                     store.remove(p);
+                                    changed = true;
                                 }
                             }
                             _ => {}
@@ -50,6 +56,9 @@ pub fn spawn(store: Arc<NotesStore>, dir: &Path) {
                         eprintln!("watcher error: {e}");
                     }
                 }
+            }
+            if changed {
+                let _ = app.emit(NOTES_UPDATED_EVENT, ());
             }
         }
     });

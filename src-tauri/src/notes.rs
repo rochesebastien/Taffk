@@ -39,6 +39,26 @@ impl From<&Note> for NoteDto {
     }
 }
 
+#[derive(Serialize, Clone)]
+pub struct NoteListEntry {
+    pub path: String,
+    pub name: String,
+}
+
+impl From<&Note> for NoteListEntry {
+    fn from(n: &Note) -> Self {
+        Self {
+            path: n.path.to_string_lossy().into_owned(),
+            name: n
+                .path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("(unnamed)")
+                .to_string(),
+        }
+    }
+}
+
 impl Note {
     pub fn from_disk(path: PathBuf, content: String) -> Self {
         let (frontmatter, body) = parse_frontmatter(&content);

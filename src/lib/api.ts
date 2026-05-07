@@ -34,3 +34,12 @@ export function getNote(path: string): Promise<NoteDto | null> {
 export function saveNote(path: string, content: string): Promise<void> {
   return invoke<void>('save_note', { path, content });
 }
+
+export type NoteListEntry = {
+  path: string;
+  name: string;
+};
+
+export function listNotes(): Promise<NoteListEntry[]> {
+  return invoke<NoteListEntry[]>('list_notes');
+}
