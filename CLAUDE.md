@@ -54,24 +54,29 @@ src-tauri/src/
   lib.rs        — setup, plugins, tray, watcher + capture spawn,
                   window-close intercept (hide instead of close)
   notes.rs      — Note { path, content, body, frontmatter }, NotesStore (RwLock),
-                  NoteDto for IPC, parse_frontmatter (--- fenced YAML)
+                  NoteDto + NoteListEntry for IPC, parse_frontmatter
   query.rs      — ParsedQuery, Filter (Tag/Id/Code), parse(), matches_filters()
   search.rs     — SearchMode { Literal, Fuzzy }, search() entry, UTF-16 offsets,
                   filter-only path when free-text is empty
-  commands.rs   — search, get_note, save_note (IPC surface)
-  watcher.rs    — debounced fs watcher, upserts/removes in the store
+  commands.rs   — search, get_note, save_note, list_notes (IPC surface)
+  watcher.rs    — debounced fs watcher, upserts/removes in the store, emits
+                  `notes-updated` Tauri event after each batch with mutations
   capture.rs    — tiny_http server on :51234 for Chrome capture
 src/
-  App.svelte    — palette layout, panes orchestration, search UX,
-                  result highlight rendering
-  app.css       — design tokens + every rule that styles {@html} content
-                  (preview prose), since Svelte's scoped styles don't reach there
+  App.svelte    — app-shell layout (sidebar + main + palette modal),
+                  panes orchestration, theme + sidebar persistence
+  app.css       — design tokens (dark + [data-theme='light']) + every rule
+                  that styles {@html} content (preview prose) and the shared
+                  primitives (.editor-pane, .result-button, etc.)
   lib/
-    api.ts          — invoke wrappers + Match/SearchMode/NoteDto/Frontmatter types
+    api.ts          — invoke wrappers + Match/SearchMode/NoteDto/
+                      Frontmatter/NoteListEntry types
     Editor.svelte   — CodeMirror 6 wrapper, userEvent-guarded onChange
     Preview.svelte  — markdown-it render + mermaid run on .mermaid nodes
     NotePane.svelte — owns one pane (path, content, save state, view mode);
                       exports flushSave() for the host to call before navigation
+    Sidebar.svelte  — logo, search trigger, notes list, theme/collapse/settings
+    Palette.svelte  — modal command palette (Ctrl+K), search + mode toggle
 ```
 
 `src/lib/api.ts` is the only boundary between front and Rust commands.
@@ -133,6 +138,16 @@ curl -X POST http://127.0.0.1:51234/capture \
 - **Tauri 2 plugin permissions**: any plugin (e.g. `tauri-plugin-global-shortcut`)
   needs an entry in `capabilities/default.json` (currently `core:default` and
   `global-shortcut:default`).
+- **Palette `stopPropagation` on Esc/Ctrl+L** is required: the window-level
+  keydown handler in App.svelte also reacts to Esc (closing the rightmost pane).
+  Without stopPropagation, dismissing the palette would also close a pane.
+- **CodeMirror in light theme**: the editor still uses `oneDark` regardless of
+  `data-theme`. Swapping themes requires plumbing a prop into Editor.svelte and
+  a light counterpart (e.g. `@codemirror/theme-quietlight`) — deferred.
+- **`notes-updated` event is fire-and-forget**: the watcher emits it after any
+  debounced batch that mutated the store. The sidebar listens via
+  `@tauri-apps/api/event` and re-fetches `list_notes`. Don't filter by path —
+  the sidebar always wants the full list.
 
 ## Don'ts
 

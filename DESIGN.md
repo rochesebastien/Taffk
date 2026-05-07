@@ -19,8 +19,6 @@ whole surface a soft glow.
 - No purple gradient on white. No "AI launchpad" template.
 - No skeuomorphic depth. No glassy buttons. No neumorphism.
 - No scattered micro-interactions (button bounces, input wiggles, etc.).
-- No light mode until the warm ambient palette has a true light counterpart
-  — NOT a token flip; the warmth would feel wrong on white.
 
 ## Tokens
 
@@ -95,32 +93,73 @@ Loose, but consistent.
 - 16px above the hint footer
 - `14vh` top margin on the shell — leaves headroom; not vertically centered.
 
+## Theme
+
+Two themes share the same accent and the same component layout — only
+the token table swaps.
+
+- **Dark** (default): `#0b0b0c` base, warm orange ambient glow, frosted
+  surfaces over near-black.
+- **Light** (`[data-theme='light']`): warm off-white `#f6f3ee` base, the
+  same warm radial glow at lower opacity, white frosted surfaces with a
+  shorter softer drop shadow, accent shifted to `#e85d1f` for AA contrast
+  on light surfaces.
+
+Toggling lives in the sidebar foot. State persists in `localStorage`
+under `gdidiot.theme`. CodeMirror still ships oneDark in both themes —
+swapping editor themes alongside the body theme is a known gap.
+
 ## Layout
 
-Single-column centered palette, max-width **720px**. No sidebar yet. The
-shell is what's on screen — the app IS the palette right now.
+Full-window app shell:
 
-When folders/tags ship (slice 3) and the editor lands (slice 4), the shell
-will grow into a full app with sidebar + main pane + status bar. At that
-point the palette becomes a Cmd-K modal **over** the shell, not a separate
-route.
+```
+┌─────────┬─────────────────────────┐
+│ Sidebar │ Top bar (search + open) │
+│ 260 px  ├─────────────────────────┤
+│         │                         │
+│  Notes  │   Welcome   |   Panes   │
+│  list   │  (no panes) | (1 or 2)  │
+│         │                         │
+└─────────┴─────────────────────────┘
+```
+
+The sidebar collapses to 0 (slot still in DOM). When collapsed, a small
+toggle appears in the top bar. `Ctrl+B` toggles either way. State persists
+in `localStorage` under `gdidiot.sidebar`.
+
+The command palette is a fixed-position modal (`Ctrl+K`), centered with a
+backdrop blur. It hosts the search input, the literal/fuzzy mode badge,
+and the result list. Click a result → palette closes and the note opens.
+`Ctrl+Shift+click` opens in a second pane (split). Escape closes the
+palette without touching the panes.
 
 ## Components
 
-- **`.shell`** — outer wrapper. `max-width: 720px`, `margin-top: 14vh`,
-  rise-fade entrance (320ms cubic-bezier(0.2, 0.8, 0.2, 1)).
-- **`.bar`** — frosted card holding the input + mode badge. `:focus-within`
-  shows a 4px soft accent ring on the parent.
-- **`input.search`** — transparent inside `.bar`. `caret-color: var(--accent)`.
-- **`.mode-badge`** — mono pill. Two states: `.mode-literal` (gray) and
-  `.mode-fuzzy` (orange).
-- **`.results`** — frosted card; `<li>` items with 10px inner radius and
-  hover background tint.
+- **`.app`** — flex shell, `100vh × 100vw`, `overflow: hidden`. Holds the
+  sidebar slot and the main area.
+- **Sidebar** — flex column, frosted on `--sidebar-bg`. Brand mark at the
+  top, search trigger, section label + notes list (scrollable), bottom
+  controls (theme toggle, settings).
+- **`.search-trigger`** — pill-shaped button mimicking an input; opens
+  the palette modal. Right side shows `⌘K` / `Ctrl+K` kbd hint.
+- **`.note-entry`** — sidebar list item. `.active` paints the accent
+  background and accent text — used for any path currently in a pane.
+- **`.topbar`** — main-area header with the sidebar toggle (only when
+  collapsed) and a small "Search" pill that mirrors the sidebar trigger.
+- **`.palette-backdrop`** — fixed full-screen, `rgba(0,0,0,0.42)` with a
+  soft blur. Click outside the palette card or Esc to close.
+- **`.palette`** — frosted card, max-width 720px. Same primitives
+  (input, mode badge, results) as the slice-1 palette, just modal now.
+- **`.editor-pane`** — frosted card. Header with path, edit/preview tabs,
+  save indicator, close button. Body holds Editor or Preview.
+- **`.mode-badge`** — mono pill. `.mode-literal` (gray) / `.mode-fuzzy`
+  (orange). Shown inside the palette only.
 - **`.path`** — mono, faint, ellipsis on overflow.
 - **`.snippet`** — line-height 1.55. `<mark>` uses a bottom-up gradient
   (highlighter, not box).
-- **`.empty`** — frosted card; same surface tokens.
-- **`.hint`** — kbd-style key caps for shortcuts at the bottom.
+- **`.welcome`** — initial empty state in the main area. Large brand
+  gradient mark + tagline + Ctrl+K hint.
 
 ## Animation principles
 
