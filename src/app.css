@@ -81,6 +81,26 @@ body {
   margin-top: 6vh;
 }
 
+.shell.has-split {
+  max-width: 1320px;
+}
+
+.panes {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+}
+
+.panes > :global(.editor-pane) {
+  margin-top: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.panes.split > :global(.editor-pane) {
+  flex: 1 1 50%;
+}
+
 @keyframes rise {
   from {
     opacity: 0;

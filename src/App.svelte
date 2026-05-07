@@ -1,29 +1,14 @@
 <script lang="ts">
-  import { search, getNote, saveNote, type Match, type SearchMode } from './lib/api';
-  import Editor from './lib/Editor.svelte';
-  import Preview from './lib/Preview.svelte';
-
-  type ViewMode = 'edit' | 'preview';
-
-  function stripFrontmatter(content: string): string {
-    const m = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
-    if (!m) return content;
-    return content.slice(m[0].length);
-  }
+  import { search, type Match, type SearchMode } from './lib/api';
+  import NotePane from './lib/NotePane.svelte';
 
   let query = $state('');
   let mode = $state<SearchMode>('literal');
   let results = $state<Match[]>([]);
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
-  let currentPath = $state<string | null>(null);
-  let currentContent = $state<string>('');
-  let savedContent = $state<string>('');
-  let viewMode = $state<ViewMode>('edit');
-  let currentBody = $derived(stripFrontmatter(currentContent));
-  let saveTimer: ReturnType<typeof setTimeout> | undefined;
-  let saveStatus = $state<'idle' | 'saving' | 'saved'>('idle');
-  let savedFlashTimer: ReturnType<typeof setTimeout> | undefined;
+  let panes = $state<{ path: string }[]>([]);
+  let paneRefs: Record<string, { flushSave: () => Promise<void> } | null> = {};
 
   function runSearch() {
     if (searchTimer) clearTimeout(searchTimer);
@@ -41,6 +26,42 @@
     runSearch();
   }
 
+  async function flushAllPanes() {
+    await Promise.all(
+      Object.values(paneRefs)
+        .filter((r): r is { flushSave: () => Promise<void> } => !!r)
+        .map((r) => r.flushSave()),
+    );
+  }
+
+  async function selectResult(path: string, evt: MouseEvent | KeyboardEvent) {
+    const splitRight = evt.ctrlKey && evt.shiftKey;
+    if (splitRight) {
+      if (panes.some((p) => p.path === path)) {
+        query = '';
+        results = [];
+        return;
+      }
+      if (panes.length >= 2) {
+        const other = panes[0];
+        await flushAllPanes();
+        panes = [other, { path }];
+      } else {
+        panes = [...panes, { path }];
+      }
+    } else {
+      await flushAllPanes();
+      panes = [{ path }];
+    }
+    query = '';
+    results = [];
+  }
+
+  function closePane(path: string) {
+    panes = panes.filter((p) => p.path !== path);
+    delete paneRefs[path];
+  }
+
   async function onKeydown(e: KeyboardEvent) {
     if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'l') {
       e.preventDefault();
@@ -48,62 +69,20 @@
       runSearch();
       return;
     }
-    if (e.key === 'Escape' && currentPath) {
-      e.preventDefault();
-      await flushSave();
-      currentPath = null;
-      currentContent = '';
-      savedContent = '';
-      viewMode = 'edit';
-    }
-  }
-
-  async function flushSave() {
-    if (saveTimer) {
-      clearTimeout(saveTimer);
-      saveTimer = undefined;
-      if (currentPath && currentContent !== savedContent) {
-        await saveNote(currentPath, currentContent);
-        savedContent = currentContent;
+    if (e.key === 'Escape') {
+      if (query) {
+        e.preventDefault();
+        query = '';
+        results = [];
+        return;
+      }
+      if (panes.length > 0) {
+        e.preventDefault();
+        const last = panes[panes.length - 1];
+        await flushAllPanes();
+        closePane(last.path);
       }
     }
-  }
-
-  async function selectResult(path: string) {
-    await flushSave();
-    const note = await getNote(path);
-    if (!note) return;
-    currentPath = note.path;
-    currentContent = note.content;
-    savedContent = note.content;
-    viewMode = 'edit';
-    query = '';
-    results = [];
-  }
-
-  function onEditorChange(next: string) {
-    if (!currentPath) return;
-    currentContent = next;
-    if (next === savedContent) return;
-    if (saveTimer) clearTimeout(saveTimer);
-    saveStatus = 'saving';
-    saveTimer = setTimeout(async () => {
-      const path = currentPath;
-      if (!path) return;
-      try {
-        await saveNote(path, next);
-        savedContent = next;
-        saveStatus = 'saved';
-        if (savedFlashTimer) clearTimeout(savedFlashTimer);
-        savedFlashTimer = setTimeout(() => {
-          saveStatus = 'idle';
-        }, 1200);
-      } catch {
-        saveStatus = 'idle';
-      } finally {
-        saveTimer = undefined;
-      }
-    }, 500);
   }
 
   function escapeHtml(s: string): string {
@@ -139,7 +118,11 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<main class="shell" class:has-editor={currentPath}>
+<main
+  class="shell"
+  class:has-editor={panes.length > 0}
+  class:has-split={panes.length > 1}
+>
   <div class="bar">
     <input
       class="search"
@@ -167,7 +150,7 @@
           <button
             type="button"
             class="result-button"
-            onclick={() => selectResult(r.path)}
+            onclick={(e) => selectResult(r.path, e)}
           >
             <div class="path">{r.path}</div>
             <div class="snippet">{@html highlight(r.snippet, r.match_ranges)}</div>
@@ -177,42 +160,16 @@
     </ul>
   {/if}
 
-  {#if currentPath && results.length === 0}
-    <section class="editor-pane">
-      <header class="editor-header">
-        <span class="editor-path">{currentPath}</span>
-        <div class="view-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === 'edit'}
-            class:active={viewMode === 'edit'}
-            onclick={() => (viewMode = 'edit')}
-          >
-            edit
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === 'preview'}
-            class:active={viewMode === 'preview'}
-            onclick={() => (viewMode = 'preview')}
-          >
-            preview
-          </button>
-        </div>
-        <span class="save-indicator save-{saveStatus}">
-          {#if saveStatus === 'saving'}saving…{:else if saveStatus === 'saved'}saved{:else}&nbsp;{/if}
-        </span>
-      </header>
-      <div class="editor-body">
-        {#if viewMode === 'edit'}
-          <Editor content={currentContent} onChange={onEditorChange} />
-        {:else}
-          <Preview content={currentBody} />
-        {/if}
-      </div>
-    </section>
+  {#if panes.length > 0 && results.length === 0}
+    <div class="panes" class:split={panes.length > 1}>
+      {#each panes as pane (pane.path)}
+        <NotePane
+          path={pane.path}
+          onClose={() => closePane(pane.path)}
+          bind:this={paneRefs[pane.path]}
+        />
+      {/each}
+    </div>
   {/if}
 
   <div class="hint">
@@ -222,10 +179,20 @@
       <kbd>L</kbd>
       <span>toggle mode</span>
     </span>
-    {#if currentPath}
+    {#if results.length > 0}
+      <span class="key-group">
+        <kbd>Ctrl</kbd>
+        <span class="sep">+</span>
+        <kbd>Shift</kbd>
+        <span class="sep">+</span>
+        <kbd>Click</kbd>
+        <span>open in split</span>
+      </span>
+    {/if}
+    {#if panes.length > 0}
       <span class="key-group">
         <kbd>Esc</kbd>
-        <span>close note</span>
+        <span>close pane</span>
       </span>
     {/if}
   </div>
