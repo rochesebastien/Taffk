@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { NoteListEntry } from './api';
-  import logoUrl from '../assets/logo_navbar.png';
+  import logoDark from '../assets/logo_navbar_dark.png';
+  import logoLight from '../assets/logo_navbar_light.png';
 
   type Theme = 'dark' | 'light';
 
@@ -34,7 +35,7 @@
 <aside class="sidebar">
   <header class="sidebar-head">
     <div class="brand">
-      <img class="brand-logo" src={logoUrl} alt="Taffk" />
+      <img class="brand-logo" src={theme === 'dark' ? logoLight : logoDark} alt="Taffk" />
     </div>
     <button
       type="button"

@@ -5,7 +5,8 @@
   import NotePane from './lib/NotePane.svelte';
   import Sidebar from './lib/Sidebar.svelte';
   import Palette from './lib/Palette.svelte';
-  import logoUrl from './assets/logo_navbar.png';
+  import logoDark from './assets/logo_navbar_dark.png';
+  import logoLight from './assets/logo_navbar_light.png';
 
   type Theme = 'dark' | 'light';
 
@@ -190,7 +191,7 @@
 
     {#if panes.length === 0}
       <div class="welcome">
-        <img class="welcome-logo" src={logoUrl} alt="Taffk" />
+        <img class="welcome-logo" src={theme === 'dark' ? logoLight : logoDark} alt="Taffk" />
         <p class="welcome-sub">
           Pick a note from the sidebar, or press
           <kbd>Ctrl</kbd><span class="sep">+</span><kbd>K</kbd> to search.
