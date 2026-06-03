@@ -1,12 +1,12 @@
 [package]
-name = "gdidiot"
+name = "taffk"
 version = "0.0.1"
 description = "Local notes spotlight"
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "gdidiot_lib"
+name = "taffk_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

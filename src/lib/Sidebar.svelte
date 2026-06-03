@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { NoteListEntry } from './api';
+  import logoUrl from '../assets/logo_navbar.png';
 
   type Theme = 'dark' | 'light';
 
@@ -33,8 +34,7 @@
 <aside class="sidebar">
   <header class="sidebar-head">
     <div class="brand">
-      <span class="brand-mark">g</span>
-      <span class="brand-name">gdidiot</span>
+      <img class="brand-logo" src={logoUrl} alt="Taffk" />
     </div>
     <button
       type="button"
@@ -175,27 +175,10 @@
     gap: 8px;
   }
 
-  .brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
+  .brand-logo {
     height: 22px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, var(--accent), #ffb27a);
-    color: #1a1a1a;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 13px;
-    line-height: 1;
-  }
-
-  .brand-name {
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    color: var(--text);
+    width: auto;
+    display: block;
   }
 
   .icon-button {

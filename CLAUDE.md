@@ -25,7 +25,7 @@ All slices in the original roadmap are landed.
 - [x] **0** — load notes, literal search via memmem, IPC plumbing, basic UI.
 - [x] **1a** — highlight literal matches (UTF-16 offsets across IPC).
 - [x] **1b** — fuzzy via nucleo (filename + content, name boost ×1.5), Ctrl+L toggle.
-- [x] **UI redesign** — Geist + warm ambient gradient + frosted-glass palette. See DESIGN.md.
+- [x] **UI redesign** — Geist + brand-blue ambient gradient + frosted-glass palette. See DESIGN.md.
 - [x] **2** — global hotkey (Ctrl+Shift+Space), tray icon (Show/Hide/Quit), fs watcher.
 - [x] **3** — YAML frontmatter, filterable search (`tag:`, `code:`, `id:`).
 - [x] **4** — CodeMirror 6 editor + 500ms debounced autosave (echo-loop guarded via
@@ -50,7 +50,7 @@ Roadmap items beyond the original spec live in the issue tracker, not here.
 
 ```
 src-tauri/src/
-  main.rs       — windows_subsystem flag + gdidiot_lib::run()
+  main.rs       — windows_subsystem flag + taffk_lib::run()
   lib.rs        — setup, plugins, tray, watcher + capture spawn,
                   window-close intercept (hide instead of close)
   notes.rs      — Note { path, content, body, frontmatter }, NotesStore (RwLock),

@@ -957,24 +957,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gdidiot"
-version = "0.0.1"
-dependencies = [
- "ignore",
- "memchr",
- "notify",
- "notify-debouncer-full",
- "nucleo-matcher",
- "serde",
- "serde_json",
- "serde_yaml",
- "tauri",
- "tauri-build",
- "tauri-plugin-global-shortcut",
- "tiny_http",
-]
-
-[[package]]
 name = "gdk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3211,6 +3193,24 @@ dependencies = [
  "pkg-config",
  "toml 0.8.2",
  "version-compare",
+]
+
+[[package]]
+name = "taffk"
+version = "0.0.1"
+dependencies = [
+ "ignore",
+ "memchr",
+ "notify",
+ "notify-debouncer-full",
+ "nucleo-matcher",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-global-shortcut",
+ "tiny_http",
 ]
 
 [[package]]

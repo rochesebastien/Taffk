@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Visual identity for the gdidiot frontend.
+Visual identity for the Taffk frontend.
 
 ## Direction
 
@@ -10,8 +10,8 @@ comes from typography, spacing, and atmosphere, not from heavy chrome or
 loud animation.
 
 The app reads as a tool, not a brand showcase. The single bold choice is
-a warm amber ambient gradient that anchors the dark canvas and gives the
-whole surface a soft glow.
+an electric-blue ambient gradient (brand `#1218FC`) that anchors the dark
+canvas and gives the whole surface a soft glow.
 
 ## What we are NOT
 
@@ -28,8 +28,8 @@ Defined in `src/app.css`. Use the variables; never hardcode.
 
 ```
 --bg-base          #0b0b0c               page base
---bg-glow-warm     orange/0.18           ambient glow, bottom-left
---bg-glow-cool     blue/0.05             ambient glow, top-right (counterweight)
+--bg-glow-primary  brand-blue/0.16       ambient glow, bottom-left
+--bg-glow-secondary violet/0.06          ambient glow, top-right (counterweight)
 
 --surface          rgba(22,22,24,0.62)   floating cards (frosted)
 --surface-strong   rgba(28,28,30,0.88)   reserved for modals
@@ -37,18 +37,22 @@ Defined in `src/app.css`. Use the variables; never hardcode.
 
 --border           rgba(255,255,255,0.07)  default
 --border-strong    rgba(255,255,255,0.12)  emphasis
---border-focus     rgba(255,138,76,0.45)   focused inputs
+--border-focus     rgba(61,68,255,0.5)     focused inputs
 
 --text             rgba(255,255,255,0.94)
 --text-dim         rgba(255,255,255,0.62)
 --text-faint       rgba(255,255,255,0.38)
 --text-whisper     rgba(255,255,255,0.22)
 
---accent           #ff8a4c               warm orange — single accent
---accent-soft      rgba(255,138,76,0.14) soft fills, focus rings, mark
+--accent           #3d44ff               brand blue (dark theme) — single accent
+--accent-soft      rgba(61,68,255,0.16)  soft fills, focus rings, mark
 ```
 
-**Single-accent rule**: orange only. If something needs to stand out, lean
+Brand color is `#1218FC`. It's used verbatim in the light theme; the dark
+theme brightens it to `#3d44ff` for legibility on near-black (same pattern
+as any accent that has to read as text on the dark canvas).
+
+**Single-accent rule**: brand blue only. If something needs to stand out, lean
 on text contrast or borders before introducing a second hue. Status colors
 (error red, success green) wait until a feature genuinely needs them.
 
@@ -98,15 +102,14 @@ Loose, but consistent.
 Two themes share the same accent and the same component layout — only
 the token table swaps.
 
-- **Dark** (default): `#0b0b0c` base, warm orange ambient glow, frosted
-  surfaces over near-black.
-- **Light** (`[data-theme='light']`): warm off-white `#f6f3ee` base, the
-  same warm radial glow at lower opacity, white frosted surfaces with a
-  shorter softer drop shadow, accent shifted to `#e85d1f` for AA contrast
-  on light surfaces.
+- **Dark** (default): `#0b0b0c` base, brand-blue ambient glow, frosted
+  surfaces over near-black. Accent brightened to `#3d44ff`.
+- **Light** (`[data-theme='light']`): cool off-white `#f4f5fb` base, the
+  same blue radial glow at lower opacity, white frosted surfaces with a
+  shorter softer drop shadow, accent set to the exact brand `#1218fc`.
 
 Toggling lives in the sidebar foot. State persists in `localStorage`
-under `gdidiot.theme`. CodeMirror still ships oneDark in both themes —
+under `taffk.theme`. CodeMirror still ships oneDark in both themes —
 swapping editor themes alongside the body theme is a known gap.
 
 ## Layout
@@ -126,7 +129,7 @@ Full-window app shell:
 
 The sidebar collapses to 0 (slot still in DOM). When collapsed, a small
 toggle appears in the top bar. `Ctrl+B` toggles either way. State persists
-in `localStorage` under `gdidiot.sidebar`.
+in `localStorage` under `taffk.sidebar`.
 
 The command palette is a fixed-position modal (`Ctrl+K`), centered with a
 backdrop blur. It hosts the search input, the literal/fuzzy mode badge,
@@ -154,7 +157,7 @@ palette without touching the panes.
 - **`.editor-pane`** — frosted card. Header with path, edit/preview tabs,
   save indicator, close button. Body holds Editor or Preview.
 - **`.mode-badge`** — mono pill. `.mode-literal` (gray) / `.mode-fuzzy`
-  (orange). Shown inside the palette only.
+  (brand blue). Shown inside the palette only.
 - **`.path`** — mono, faint, ellipsis on overflow.
 - **`.snippet`** — line-height 1.55. `<mark>` uses a bottom-up gradient
   (highlighter, not box).
@@ -177,7 +180,7 @@ If you're adding a feature the current system can't express:
 - prefer **adding a new token** to redefining an existing one
 - prefer **adding a component** to overloading an existing one
 - prefer **extending** the radii / spacing scale to one-off values
-- never duplicate the warm/cool gradient — it is the canvas signature
+- never duplicate the blue/violet gradient — it is the canvas signature
 
 If you find yourself reaching for a green checkmark or a red error blob,
 stop and propose a token in the design discussion before adding it.

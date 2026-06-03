@@ -6,8 +6,8 @@
   --font-mono: 'Geist Mono Variable', ui-monospace, "Cascadia Code", Consolas, monospace;
 
   --bg-base: #0b0b0c;
-  --bg-glow-warm: rgba(255, 138, 76, 0.18);
-  --bg-glow-cool: rgba(80, 110, 220, 0.05);
+  --bg-glow-primary: rgba(45, 55, 255, 0.16);
+  --bg-glow-secondary: rgba(130, 95, 240, 0.06);
 
   --surface: rgba(22, 22, 24, 0.62);
   --surface-strong: rgba(28, 28, 30, 0.88);
@@ -18,15 +18,15 @@
 
   --border: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.12);
-  --border-focus: rgba(255, 138, 76, 0.45);
+  --border-focus: rgba(61, 68, 255, 0.5);
 
   --text: rgba(255, 255, 255, 0.94);
   --text-dim: rgba(255, 255, 255, 0.62);
   --text-faint: rgba(255, 255, 255, 0.38);
   --text-whisper: rgba(255, 255, 255, 0.22);
 
-  --accent: #ff8a4c;
-  --accent-soft: rgba(255, 138, 76, 0.14);
+  --accent: #3d44ff;
+  --accent-soft: rgba(61, 68, 255, 0.16);
 
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 24px 60px -20px rgba(0, 0, 0, 0.55);
 
@@ -37,28 +37,28 @@
 }
 
 [data-theme='light'] {
-  --bg-base: #f6f3ee;
-  --bg-glow-warm: rgba(255, 138, 76, 0.10);
-  --bg-glow-cool: rgba(80, 110, 220, 0.04);
+  --bg-base: #f4f5fb;
+  --bg-glow-primary: rgba(18, 24, 252, 0.08);
+  --bg-glow-secondary: rgba(130, 95, 240, 0.05);
 
   --surface: rgba(255, 255, 255, 0.78);
   --surface-strong: rgba(255, 255, 255, 0.96);
   --surface-faint: rgba(255, 255, 255, 0.6);
   --surface-hover: rgba(0, 0, 0, 0.035);
 
-  --sidebar-bg: rgba(248, 245, 240, 0.72);
+  --sidebar-bg: rgba(244, 245, 251, 0.72);
 
   --border: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.16);
-  --border-focus: rgba(232, 93, 31, 0.5);
+  --border-focus: rgba(18, 24, 252, 0.5);
 
   --text: rgba(20, 20, 20, 0.96);
   --text-dim: rgba(20, 20, 20, 0.62);
   --text-faint: rgba(20, 20, 20, 0.40);
   --text-whisper: rgba(20, 20, 20, 0.22);
 
-  --accent: #e85d1f;
-  --accent-soft: rgba(232, 93, 31, 0.10);
+  --accent: #1218fc;
+  --accent-soft: rgba(18, 24, 252, 0.10);
 
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 12px 32px -8px rgba(0, 0, 0, 0.10);
 
@@ -86,8 +86,8 @@ html, body {
 
 body {
   background-image:
-    radial-gradient(ellipse 900px 700px at 8% 105%, var(--bg-glow-warm) 0%, transparent 55%),
-    radial-gradient(ellipse 700px 500px at 95% -10%, var(--bg-glow-cool) 0%, transparent 50%);
+    radial-gradient(ellipse 900px 700px at 8% 105%, var(--bg-glow-primary) 0%, transparent 55%),
+    radial-gradient(ellipse 700px 500px at 95% -10%, var(--bg-glow-secondary) 0%, transparent 50%);
   min-height: 100vh;
 }
 

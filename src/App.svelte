@@ -5,6 +5,7 @@
   import NotePane from './lib/NotePane.svelte';
   import Sidebar from './lib/Sidebar.svelte';
   import Palette from './lib/Palette.svelte';
+  import logoUrl from './assets/logo_navbar.png';
 
   type Theme = 'dark' | 'light';
 
@@ -17,8 +18,8 @@
   let theme = $state<Theme>('dark');
   let activePaths = $derived(panes.map((p) => p.path));
 
-  const THEME_KEY = 'gdidiot.theme';
-  const SIDEBAR_KEY = 'gdidiot.sidebar';
+  const THEME_KEY = 'taffk.theme';
+  const SIDEBAR_KEY = 'taffk.sidebar';
 
   let unlistenNotesUpdated: (() => void) | undefined;
 
@@ -189,8 +190,7 @@
 
     {#if panes.length === 0}
       <div class="welcome">
-        <div class="welcome-mark">g</div>
-        <p class="welcome-title">gdidiot</p>
+        <img class="welcome-logo" src={logoUrl} alt="Taffk" />
         <p class="welcome-sub">
           Pick a note from the sidebar, or press
           <kbd>Ctrl</kbd><span class="sep">+</span><kbd>K</kbd> to search.
@@ -304,28 +304,10 @@
     text-align: center;
   }
 
-  .welcome-mark {
-    width: 56px;
+  .welcome-logo {
     height: 56px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--accent), #ffb27a);
-    color: #1a1a1a;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 30px;
+    width: auto;
     margin-bottom: 6px;
-    box-shadow: 0 12px 32px -10px rgba(255, 138, 76, 0.55);
-  }
-
-  .welcome-title {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    color: var(--text);
   }
 
   .welcome-sub {
