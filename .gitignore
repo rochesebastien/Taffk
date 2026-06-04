@@ -12,8 +12,6 @@ src-tauri/gen/
 .DS_Store
 Thumbs.db
 
-# Test fixtures (regenerable via generate_test_notes.py)
-/notes/
 
 # Toolchain installer leftovers
 /rustup-init.exe

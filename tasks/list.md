@@ -56,7 +56,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 - [x] Calendar / week planner (drag-to-schedule, per-day quick add)
 
 ## Phase 6 — Docs & cleanup
-- [ ] Rewrite `CLAUDE.md` for new architecture
-- [ ] Update `DESIGN.md` if layout changes
-- [ ] Remove dead files (generate_test_notes.py, capture, etc.)
-- [ ] Final build/check + push
+- [x] Rewrite `CLAUDE.md` for new architecture
+- [x] Update `DESIGN.md` if layout changes
+- [x] Remove dead files (generate_test_notes.py, capture, etc.)
+- [x] Final build/check + push

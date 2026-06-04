@@ -86,9 +86,12 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
 - **`create_task` sets `sort_order = 0`** for all new tasks (orders fall back to
   `created_at`). Mock uses `tasks.length`. Fine until drag-reorder; `reorder_tasks`
   sets explicit orders. Revisit when implementing kanban/list drag.
-- Dead notes-era CSS (`.editor-*`, `.view-tabs`, `.mode-badge`, `.result-button`,
-  `.path`, `.snippet`, `.save-indicator`) still in app.css. `.preview` prose styles
-  kept on purpose for task markdown notes. Prune the rest in Phase 6.
+- Dead notes-era CSS pruned in Phase 6 (`.editor-*`, `.mode-badge`,
+  `.result-button`, `.path`, `.snippet`, `.save-indicator`). KEPT `.view-tabs`
+  (reused by the notes Write/Aperçu toggle) and `.preview` prose (task notes).
+- Docs rewritten for the new architecture: README.md, CLAUDE.md, DESIGN.md
+  (Layout + Components sections). `generate_test_notes.py` and the `/notes/`
+  gitignore entry removed.
 
 ## Conventions kept from the old codebase
 

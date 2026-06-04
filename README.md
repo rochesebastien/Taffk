@@ -4,44 +4,45 @@
   <img src="./git_cover.png" alt="Taffk" width="100%" />
 </p>
 
-> Local-first, RAM-only notes spotlight. No database, no cloud, no persistent
-> index — every search rescans the notes already loaded in memory.
+> Local-first personal work manager. Your tasks, projects, focus time — on your
+> machine, in a single SQLite file. No cloud, no login, no telemetry.
 
-Taffk is a desktop spotlight for your plain-text notes. Hit a global hotkey,
-type, and it fuzzy- or literal-searches every loaded `.md`/`.txt` note in under
-20 ms. Open a note in a built-in editor, preview it (Markdown + Mermaid), or
-split two side by side. Notes stay on disk as plain files you fully own.
+Taffk is a keyboard-first desktop app for managing personal work, in the spirit
+of SuperProductivity: plan your day, organise tasks into projects and tags,
+work them on a Kanban board or a weekly planner, and track focus time with a
+built-in Pomodoro timer.
 
 ## Features
 
-- **Instant search** — literal (`memchr::memmem`) or fuzzy (`nucleo-matcher`,
-  filename-boosted), toggle with `Ctrl+L`. Matches highlighted inline.
-- **Filterable queries** — narrow by YAML frontmatter with `tag:`, `code:`,
-  and `id:` filters, combined with free-text.
-- **Global hotkey + tray** — summon with `Ctrl+Shift+Space`; tray icon with
+- **Quick capture** — type a task and hit Enter. Inline `#tag` and `@projet`
+  syntax creates tags/projects on the fly.
+- **Today / All / Projects** — a daily plan (tasks scheduled for today), the
+  full backlog, and per-project lists. Done tasks group at the bottom.
+- **Task detail** — a drawer to edit title, project, tags, estimate, schedule,
+  and **markdown notes** (CodeMirror 6 editor + markdown-it preview).
+- **Kanban board** — three status columns (À faire / En cours / Terminé) with
+  drag-and-drop between them.
+- **Week planner** — a 7-day calendar; drag tasks between days to reschedule,
+  or to/from an "unscheduled" backlog. Per-day quick add.
+- **Pomodoro + time tracking** — focus sessions (25/5 by default), per-task or
+  global, persisted to `time_entries`; a task accumulates its "temps passé".
+- **Global hotkey + tray** — summon with `Ctrl+Shift+Space`; tray with
   Show / Hide / Quit. Closing the window hides it instead of quitting.
-- **Editor + preview** — CodeMirror 6 with 500 ms debounced autosave, and a
-  `markdown-it` preview supporting GFM tables, inline HTML, and Mermaid.
-- **Split view** — open two notes side by side (`Ctrl+Shift+click` a result).
-- **Live filesystem watch** — edits made outside the app show up automatically
-  (200 ms debounced `notify` watcher).
-- **HTTP capture** — `POST /capture` on `127.0.0.1:51234` for a browser
-  extension to drop clippings straight into your notes.
+- **Dark / light theme** — single brand-blue accent, persisted locally.
 
 ## Stack
 
 - **[Tauri 2](https://tauri.app/)** (MSVC toolchain on Windows) — desktop shell.
-- **Frontend** — [Svelte 5](https://svelte.dev/) (runes mode), TypeScript strict,
-  Vite 5.
-- **Search core** — `memchr::memmem` (literal) and `nucleo-matcher` (fuzzy).
-- **Walker** — the `ignore` crate with every ignore filter disabled (your notes
-  folder is not a repo; hidden files and `.gitignore` rules must not exclude it).
-- **Watcher** — `notify` + `notify-debouncer-full`.
-- **Editor / preview** — CodeMirror 6, `markdown-it`, `mermaid`.
-- **Capture** — `tiny_http` (single-threaded, sync).
+- **Frontend** — [React 19](https://react.dev/) + TypeScript strict, Vite 5,
+  [Zustand](https://github.com/pmndrs/zustand) for state.
+- **Storage** — SQLite via [`rusqlite`](https://github.com/rusqlite/rusqlite)
+  (bundled), owned by the Rust backend and exposed through Tauri IPC commands.
+- **Editor / preview** — CodeMirror 6 (`@uiw/react-codemirror`) + `markdown-it`.
 
-No SQLite, no persistent index, no migration layer. Notes load to RAM at
-startup and every search rescans them.
+The Rust side owns the database and business logic; the React frontend talks to
+it exclusively through the typed wrappers in `src/lib/api.ts`. Running outside
+the Tauri shell (a plain browser) transparently falls back to an in-memory mock
+backend, so the UI can be previewed without the desktop runtime.
 
 ## Getting started
 
@@ -53,32 +54,24 @@ npm run tauri dev      # dev (cold Rust build ~5 min, then incremental)
 Other commands:
 
 ```sh
-npm run check          # svelte-check
+npm run check                 # tsc --noEmit (frontend typecheck)
+npm run build                 # typecheck + vite build
 cd src-tauri && cargo check   # Rust-only fast check
-py generate_test_notes.py     # regenerate the <repo>/notes fixtures
+cd src-tauri && cargo test    # Rust unit tests (db round-trips)
 ```
 
-Notes live in `<repo>/notes` (resolved at compile time from `CARGO_MANIFEST_DIR`).
-The folder is gitignored — fixtures are regenerable.
-
-Drop a clipping in from the command line:
-
-```sh
-curl -X POST http://127.0.0.1:51234/capture \
-  -H 'content-type: application/json' \
-  -d '{"title":"hello","body":"# Hi\n\nfrom curl"}'
-```
+The SQLite database lives in the platform app-data directory (`taffk.db`),
+created automatically on first run.
 
 ## Design
 
-- **Volume target** — 500–2000 notes × ~5 KB.
-- **Latency target** — < 20 ms per search at full volume.
-- Notes are **plain `.md` / `.txt`** — Taffk never invents an on-disk format.
+- **Volume target** — hundreds to a few thousand tasks; a global lock over a
+  single connection is plenty.
 - **Single-accent UI** built on brand blue `#1218FC`, with dark (default) and
   light themes. See [DESIGN.md](./DESIGN.md) for tokens and rationale, and
   [CLAUDE.md](./CLAUDE.md) for architecture.
 
 ## Non-goals
 
-No database, no persistent index, no cloud sync, no login, no telemetry. Taffk
-is a local-first tool over plain files — and stays that way.
+No cloud sync, no login, no telemetry, no multi-tenant server. Taffk is a
+local-first tool over a single SQLite file — and stays that way.
