@@ -1,7 +1,7 @@
 [package]
 name = "taffk"
 version = "0.0.1"
-description = "Local notes spotlight"
+description = "Local work manager"
 edition = "2021"
 rust-version = "1.77"
 
@@ -17,13 +17,8 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-ignore = "0.4"
-memchr = "2"
-nucleo-matcher = "0.3"
-notify = "6"
-notify-debouncer-full = "0.3"
-serde_yaml = "0.9"
-tiny_http = "0.12"
+rusqlite = { version = "0.32", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 codegen-units = 1

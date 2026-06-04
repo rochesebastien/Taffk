@@ -114,55 +114,51 @@ swapping editor themes alongside the body theme is a known gap.
 
 ## Layout
 
-Full-window app shell:
+Full-window app shell — a fixed sidebar plus a swappable main view:
 
 ```
-┌─────────┬─────────────────────────┐
-│ Sidebar │ Top bar (search + open) │
-│ 260 px  ├─────────────────────────┤
-│         │                         │
-│  Notes  │   Welcome   |   Panes   │
-│  list   │  (no panes) | (1 or 2)  │
-│         │                         │
-└─────────┴─────────────────────────┘
+┌──────────┬───────────────────────────────────┐
+│ Sidebar  │  Main view (Today / All / Project  │
+│ 244 px   │   / Board / Planning)              │
+│          │                                    │
+│ nav      │   ┌─ list-header ───────────────┐  │
+│ projects │   │ quick-add                   │  │
+│          │   │ tasks…                      │  │
+│ pomodoro │   └─────────────────────────────┘  │
+│ theme    │                                    │
+└──────────┴───────────────────────────────────┘
+        + task detail drawer (right overlay)
 ```
 
-The sidebar collapses to 0 (slot still in DOM). When collapsed, a small
-toggle appears in the top bar. `Ctrl+B` toggles either way. State persists
-in `localStorage` under `taffk.sidebar`.
+The sidebar (frosted on `--sidebar-bg`) holds the brand mark, the view nav
+(Today / All / Board / Planning), the project list (with create), then a foot
+with the Pomodoro widget and the theme toggle. The main area renders one view
+at a time inside a single frosted card. Selecting a task opens the detail
+drawer as a right-side overlay with a dimmed backdrop (`Esc` closes it).
 
-The command palette is a fixed-position modal (`Ctrl+K`), centered with a
-backdrop blur. It hosts the search input, the literal/fuzzy mode badge,
-and the result list. Click a result → palette closes and the note opens.
-`Ctrl+Shift+click` opens in a second pane (split). Escape closes the
-palette without touching the panes.
+Theme toggle lives in the sidebar foot; state persists in `localStorage` under
+`taffk.theme`. CodeMirror still ships oneDark in both themes — a known gap.
 
 ## Components
 
-- **`.app`** — flex shell, `100vh × 100vw`, `overflow: hidden`. Holds the
-  sidebar slot and the main area.
-- **Sidebar** — flex column, frosted on `--sidebar-bg`. Brand mark at the
-  top, search trigger, section label + notes list (scrollable), bottom
-  controls (theme toggle, settings).
-- **`.search-trigger`** — pill-shaped button mimicking an input; opens
-  the palette modal. Right side shows `⌘K` / `Ctrl+K` kbd hint.
-- **`.note-entry`** — sidebar list item. `.active` paints the accent
-  background and accent text — used for any path currently in a pane.
-- **`.topbar`** — main-area header with the sidebar toggle (only when
-  collapsed) and a small "Search" pill that mirrors the sidebar trigger.
-- **`.palette-backdrop`** — fixed full-screen, `rgba(0,0,0,0.42)` with a
-  soft blur. Click outside the palette card or Esc to close.
-- **`.palette`** — frosted card, max-width 720px. Same primitives
-  (input, mode badge, results) as the slice-1 palette, just modal now.
-- **`.editor-pane`** — frosted card. Header with path, edit/preview tabs,
-  save indicator, close button. Body holds Editor or Preview.
-- **`.mode-badge`** — mono pill. `.mode-literal` (gray) / `.mode-fuzzy`
-  (brand blue). Shown inside the palette only.
-- **`.path`** — mono, faint, ellipsis on overflow.
-- **`.snippet`** — line-height 1.55. `<mark>` uses a bottom-up gradient
-  (highlighter, not box).
-- **`.welcome`** — initial empty state in the main area. Large brand
-  gradient mark + tagline + Ctrl+K hint.
+- **`.app-shell`** — `grid-template-columns: 244px 1fr`, `100vh`.
+- **Sidebar** — `.nav-item` (with `.active` accent fill), `.project-dot`,
+  `.sidebar-section` (projects), `.sidebar-foot` (Pomodoro + theme).
+- **Main views** — `.list-view` / `.board-view` / `.cal-view` are the frosted
+  card; each opens with a `.list-header` (title + stats).
+- **`.quick-add`** — input row with a `+`, focus-within accent border. Parses
+  `#tag` and `@projet`.
+- **`.task-item`** — checkbox (`.task-check`, accent when done), title, meta
+  (project dot, `#tags`, estimate, notes flag), hover actions.
+- **`.task-detail` drawer** — `.detail-drawer` over `.detail-backdrop`; fields,
+  tag chips, and `.notes` (CodeMirror + markdown-it preview, Write/Aperçu tabs).
+- **`.board-col` / `.board-card`** — Kanban columns and draggable cards; columns
+  light up on drag-over (accent-soft).
+- **`.cal-day` / `.cal-card`** — planner day columns (today gets an accent
+  border) and compact draggable cards; `.cal-backlog` is the unscheduled row.
+- **`.pomo`** — sidebar focus timer: idle start button, or active state with
+  mono `MM:SS`, progress bar, controls, and today's total.
+- **`.view-tabs`** — the Write/Aperçu toggle reused inside the notes editor.
 
 ## Animation principles
 
