@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus } from './api';
 
-export type View = 'today' | 'all' | 'project' | 'board';
+export type View = 'today' | 'all' | 'project' | 'board' | 'calendar';
 
 export type QuickAddParsed = {
   title: string;
@@ -43,7 +43,7 @@ type Store = {
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
 
-  quickAdd: (raw: string, opts?: { scheduleToday?: boolean }) => Promise<void>;
+  quickAdd: (raw: string, opts?: { scheduleToday?: boolean; date?: string | null }) => Promise<void>;
   toggleDone: (id: string, done: boolean) => Promise<void>;
   moveTask: (id: string, status: TaskStatus) => Promise<void>;
   patchTask: (patch: TaskPatch) => Promise<void>;
@@ -104,12 +104,9 @@ export const useStore = create<Store>((set, get) => ({
       projectId = get().activeProjectId;
     }
 
-    const task = await api.createTask({
-      title: parsed.title,
-      projectId,
-      tagIds,
-      scheduledFor: opts?.scheduleToday ? todayStr() : null,
-    });
+    const scheduledFor =
+      opts?.date !== undefined ? opts.date : opts?.scheduleToday ? todayStr() : null;
+    const task = await api.createTask({ title: parsed.title, projectId, tagIds, scheduledFor });
     set({ tasks: [...get().tasks, task] });
   },
 

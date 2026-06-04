@@ -63,6 +63,13 @@ export function Sidebar() {
           <span className="nav-icon">▦</span>
           <span className="nav-label">Tableau</span>
         </button>
+        <button
+          className={`nav-item ${view === 'calendar' ? 'active' : ''}`}
+          onClick={() => setView('calendar')}
+        >
+          <span className="nav-icon">▤</span>
+          <span className="nav-label">Planning</span>
+        </button>
       </nav>
 
       <div className="sidebar-section">

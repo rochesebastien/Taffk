@@ -53,7 +53,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 - [x] Task detail panel + markdown notes (CodeMirror React + preview)
 - [x] Kanban board (status columns, native drag/drop)
 - [x] Pomodoro timer + time tracking (time_entries)
-- [ ] Calendar / scheduling view
+- [x] Calendar / week planner (drag-to-schedule, per-day quick add)
 
 ## Phase 6 — Docs & cleanup
 - [ ] Rewrite `CLAUDE.md` for new architecture

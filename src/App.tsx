@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TaskListView } from './components/TaskListView';
 import { KanbanBoard } from './components/KanbanBoard';
+import { CalendarView } from './components/CalendarView';
 import { TaskDetail } from './components/TaskDetail';
 import { useStore } from './lib/store';
 
@@ -34,6 +35,8 @@ export default function App() {
           <div className="app-loading">…</div>
         ) : view === 'board' ? (
           <KanbanBoard />
+        ) : view === 'calendar' ? (
+          <CalendarView />
         ) : (
           <TaskListView />
         )}
