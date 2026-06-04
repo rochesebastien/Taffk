@@ -281,6 +281,49 @@ impl Db {
         Ok(tasks)
     }
 
+    // ---- time entries ---------------------------------------------------
+
+    pub fn log_time(
+        &self,
+        task_id: Option<&str>,
+        seconds: i64,
+        kind: &str,
+    ) -> SqlResult<Option<TaskDto>> {
+        let conn = self.conn.lock().unwrap();
+        let id = new_id();
+        conn.execute(
+            "INSERT INTO time_entries
+                (id, task_id, started_at, ended_at, duration_seconds, kind)
+             VALUES (?1, ?2, datetime('now', '-' || ?3 || ' seconds'),
+                     datetime('now'), ?3, ?4)",
+            params![id, task_id, seconds, kind],
+        )?;
+
+        match (kind, task_id) {
+            ("work", Some(task_id)) => {
+                let minutes = ((seconds as f64) / 60.0).round() as i64;
+                conn.execute(
+                    "UPDATE tasks SET spent_minutes = spent_minutes + ?1,
+                        updated_at = datetime('now') WHERE id = ?2",
+                    params![minutes, task_id],
+                )?;
+                Ok(Some(Self::query_task(&conn, task_id)?))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    pub fn time_today(&self) -> SqlResult<i64> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT COALESCE(SUM(duration_seconds), 0) FROM time_entries
+             WHERE kind = 'work'
+               AND date(COALESCE(ended_at, started_at)) = date('now')",
+            [],
+            |row| row.get(0),
+        )
+    }
+
     // ---- projects -------------------------------------------------------
 
     pub fn list_projects(&self) -> SqlResult<Vec<ProjectDto>> {
@@ -438,5 +481,36 @@ mod tests {
         // Round-trip via a fresh list to confirm persistence in the connection.
         let listed = db.list_tasks().unwrap();
         assert!(listed[0].done);
+    }
+
+    #[test]
+    fn log_time_work_and_break() {
+        let db = Db::open_in_memory().expect("open in-memory db");
+
+        let task = db
+            .create_task(NewTask {
+                title: "Focus".into(),
+                notes: None,
+                project_id: None,
+                parent_id: None,
+                scheduled_for: None,
+                estimate_minutes: None,
+                tag_ids: None,
+            })
+            .unwrap();
+        assert_eq!(task.spent_minutes, 0);
+
+        let updated = db.log_time(Some(&task.id), 1500, "work").unwrap();
+        let updated = updated.expect("work entry tied to a task returns the task");
+        assert_eq!(updated.spent_minutes, 25);
+        assert!(db.time_today().unwrap() >= 1500);
+
+        // A break entry without a task touches no task and returns None.
+        let none = db.log_time(None, 300, "break").unwrap();
+        assert!(none.is_none());
+
+        let listed = db.list_tasks().unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].spent_minutes, 25);
     }
 }

@@ -38,6 +38,8 @@ pub fn run() {
             commands::list_tags,
             commands::create_tag,
             commands::delete_tag,
+            commands::log_time,
+            commands::time_today,
         ])
         .setup(move |app| {
             let data_dir = app.path().app_data_dir()?;

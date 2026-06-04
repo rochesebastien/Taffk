@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { useTheme } from '../lib/theme';
+import { PomodoroWidget } from './PomodoroWidget';
 import logoDark from '../assets/logo_navbar_dark.png';
 import logoLight from '../assets/logo_navbar_light.png';
 
@@ -102,6 +103,7 @@ export function Sidebar() {
       </div>
 
       <div className="sidebar-foot">
+        <PomodoroWidget />
         <button className="foot-btn" onClick={toggle} title="Changer de thème">
           {theme === 'dark' ? '☾' : '☀'}
           <span>{theme === 'dark' ? 'Sombre' : 'Clair'}</span>

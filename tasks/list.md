@@ -52,7 +52,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 ## Phase 5 — Incremental features (depth after foundation)
 - [x] Task detail panel + markdown notes (CodeMirror React + preview)
 - [x] Kanban board (status columns, native drag/drop)
-- [ ] Pomodoro timer + time tracking (time_entries)
+- [x] Pomodoro timer + time tracking (time_entries)
 - [ ] Calendar / scheduling view
 
 ## Phase 6 — Docs & cleanup

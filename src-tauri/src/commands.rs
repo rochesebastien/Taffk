@@ -89,3 +89,19 @@ pub fn create_tag(
 pub fn delete_tag(id: String, db: State<'_, Db>) -> Result<(), String> {
     db.delete_tag(&id).map_err(map_err)
 }
+
+#[tauri::command]
+pub fn log_time(
+    task_id: Option<String>,
+    seconds: i64,
+    kind: String,
+    db: State<'_, Db>,
+) -> Result<Option<TaskDto>, String> {
+    db.log_time(task_id.as_deref(), seconds, &kind)
+        .map_err(map_err)
+}
+
+#[tauri::command]
+pub fn time_today(db: State<'_, Db>) -> Result<i64, String> {
+    db.time_today().map_err(map_err)
+}

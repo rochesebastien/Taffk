@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
+import { usePomodoro } from '../lib/pomodoro';
 import { MarkdownNotes } from './MarkdownNotes';
 import type { Task } from '../lib/api';
 
@@ -14,6 +15,7 @@ export function TaskDetail({ task }: Props) {
   const deleteTask = useStore((s) => s.deleteTask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
+  const startWork = usePomodoro((s) => s.startWork);
 
   const [title, setTitle] = useState(task.title);
   const [tagDraft, setTagDraft] = useState('');
@@ -118,6 +120,19 @@ export function TaskDetail({ task }: Props) {
                 onClick={() => void scheduleForToday(task.id, !isToday)}
               >
                 {isToday ? "◎ Aujourd'hui" : "Planifier aujourd'hui"}
+              </button>
+            </div>
+
+            <div className="field">
+              <span className="field-label">
+                Temps passé{task.spentMinutes > 0 ? ` · ${task.spentMinutes} min` : ''}
+              </span>
+              <button
+                className="field-toggle"
+                onClick={() => startWork(task.id)}
+                title="Démarrer un pomodoro sur cette tâche"
+              >
+                ▶ Focus 25 min
               </button>
             </div>
           </div>

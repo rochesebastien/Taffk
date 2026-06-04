@@ -1,4 +1,4 @@
-import type { Backend, NewTask, Project, Tag, Task, TaskPatch } from './api';
+import type { Backend, NewTask, Project, Tag, Task, TaskPatch, TimeKind } from './api';
 
 /**
  * In-memory backend used when the app runs outside the Tauri shell (plain
@@ -14,6 +14,7 @@ const uid = () =>
 let projects: Project[] = [];
 let tags: Tag[] = [];
 let tasks: Task[] = [];
+const timeLog: { taskId: string | null; seconds: number; kind: TimeKind; at: string }[] = [];
 
 function seed() {
   const createdAt = now();
@@ -137,5 +138,24 @@ export const mockBackend: Backend = {
     tasks.forEach((t) => {
       t.tagIds = t.tagIds.filter((x) => x !== id);
     });
+  },
+
+  async logTime(taskId: string | null, seconds: number, kind: TimeKind) {
+    timeLog.push({ taskId, seconds, kind, at: now() });
+    if (kind === 'work' && taskId) {
+      const t = tasks.find((x) => x.id === taskId);
+      if (t) {
+        t.spentMinutes += Math.round(seconds / 60);
+        t.updatedAt = now();
+        return clone(t);
+      }
+    }
+    return null;
+  },
+  async timeToday() {
+    const day = today();
+    return timeLog
+      .filter((e) => e.kind === 'work' && e.at.slice(0, 10) === day)
+      .reduce((sum, e) => sum + e.seconds, 0);
   },
 };

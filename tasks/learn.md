@@ -60,6 +60,19 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
 - The locked contract that makes parallelism safe is `src/lib/api.ts` (command
   names, arg shapes, DTO field names). Backend and frontend both target it.
 
+## Pomodoro / time tracking
+
+- Timer lives in a dedicated zustand store `lib/pomodoro.ts` (separate from the
+  data store) so it survives view changes. A single `setInterval` runs inside
+  the always-mounted `PomodoroWidget` (sidebar foot) and calls `tick()`.
+- Backend: `log_time(taskId, seconds, kind)` inserts a `time_entries` row and,
+  for work+task, bumps `tasks.spent_minutes`, returning the updated task.
+  `time_today()` sums today's work seconds. Cross-store update: pomodoro store
+  calls `useStore.getState()/setState()` to refresh the task after logging.
+- Sessions are logged on completion AND on manual stop (partial elapsed). Work
+  auto-rolls into a break; break ends to idle. Durations default 25/5, settings
+  UI deferred (`setDurations` action exists for later).
+
 ## Open follow-ups / known divergences
 
 - **`status` vs `done` — RESOLVED in kanban phase.** The store is now the single

@@ -1258,3 +1258,141 @@ body {
   padding: 18px 0;
   font-size: 13px;
 }
+
+/* ── Pomodoro ──────────────────────────────────────────────────────────── */
+
+.pomo {
+  padding: 4px 2px 10px;
+}
+
+.pomo-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  background: var(--surface-faint);
+  color: var(--text-dim);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.pomo-start:hover {
+  color: var(--text);
+  border-color: var(--border-focus);
+  background: var(--accent-soft);
+}
+
+.pomo-start-icon {
+  font-size: 10px;
+  color: var(--accent);
+}
+
+.pomo-start-time {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.pomo-active {
+  border: 1px solid var(--border);
+  background: var(--surface-faint);
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+
+.pomo.work .pomo-active {
+  border-color: var(--border-focus);
+}
+
+.pomo-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.pomo-phase {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+
+.pomo.work .pomo-phase {
+  color: var(--accent);
+}
+
+.pomo-time {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.pomo-bar {
+  height: 3px;
+  background: var(--surface-hover);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 7px 0;
+}
+
+.pomo-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+.pomo-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pomo-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  width: 26px;
+  height: 24px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.pomo-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.pomo-task {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pomo-today {
+  margin-top: 8px;
+  padding: 0 2px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-whisper);
+  letter-spacing: 0.02em;
+}

@@ -12,6 +12,8 @@ import { mockBackend } from './mockBackend';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 
+export type TimeKind = 'work' | 'break';
+
 export type Task = {
   id: string;
   title: string;
@@ -87,6 +89,12 @@ export interface Backend {
   listTags(): Promise<Tag[]>;
   createTag(name: string, color: string | null): Promise<Tag>;
   deleteTag(id: string): Promise<void>;
+
+  /** Persist a finished timer session. Returns the updated task when a work
+   *  session was tied to a task (its spentMinutes is incremented), else null. */
+  logTime(taskId: string | null, seconds: number, kind: TimeKind): Promise<Task | null>;
+  /** Total work seconds logged today (local date). */
+  timeToday(): Promise<number>;
 }
 
 const tauriBackend: Backend = {
@@ -105,6 +113,9 @@ const tauriBackend: Backend = {
   listTags: () => invoke('list_tags'),
   createTag: (name, color) => invoke('create_tag', { name, color }),
   deleteTag: (id) => invoke('delete_tag', { id }),
+
+  logTime: (taskId, seconds, kind) => invoke('log_time', { taskId, seconds, kind }),
+  timeToday: () => invoke('time_today'),
 };
 
 export const isTauri =
