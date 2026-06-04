@@ -1,42 +1,91 @@
-use crate::notes::{NoteDto, NoteListEntry, NotesStore};
-use crate::search::{search as run_search, Match, SearchMode};
-use std::path::PathBuf;
-use std::sync::Arc;
 use tauri::State;
 
-#[tauri::command]
-pub fn search(
-    query: String,
-    mode: String,
-    state: State<'_, Arc<NotesStore>>,
-) -> Vec<Match> {
-    let mode = match mode.as_str() {
-        "fuzzy" => SearchMode::Fuzzy,
-        _ => SearchMode::Literal,
-    };
-    let notes = state.notes.read().unwrap();
-    run_search(&query, notes.as_slice(), mode)
+use crate::db::Db;
+use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch};
+
+fn map_err(e: rusqlite::Error) -> String {
+    e.to_string()
 }
 
 #[tauri::command]
-pub fn get_note(path: String, state: State<'_, Arc<NotesStore>>) -> Option<NoteDto> {
-    let target = PathBuf::from(&path);
-    let notes = state.notes.read().unwrap();
-    notes
-        .iter()
-        .find(|n| n.path == target)
-        .map(NoteDto::from)
+pub fn list_tasks(db: State<'_, Db>) -> Result<Vec<TaskDto>, String> {
+    db.list_tasks().map_err(map_err)
 }
 
 #[tauri::command]
-pub fn save_note(path: String, content: String) -> Result<(), String> {
-    std::fs::write(&path, content).map_err(|e| e.to_string())
+pub fn create_task(input: NewTask, db: State<'_, Db>) -> Result<TaskDto, String> {
+    db.create_task(input).map_err(map_err)
 }
 
 #[tauri::command]
-pub fn list_notes(state: State<'_, Arc<NotesStore>>) -> Vec<NoteListEntry> {
-    let notes = state.notes.read().unwrap();
-    let mut entries: Vec<NoteListEntry> = notes.iter().map(NoteListEntry::from).collect();
-    entries.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    entries
+pub fn update_task(patch: TaskPatch, db: State<'_, Db>) -> Result<TaskDto, String> {
+    db.update_task(patch).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn delete_task(id: String, db: State<'_, Db>) -> Result<(), String> {
+    db.delete_task(&id).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn set_task_tags(
+    task_id: String,
+    tag_ids: Vec<String>,
+    db: State<'_, Db>,
+) -> Result<TaskDto, String> {
+    db.set_task_tags(&task_id, &tag_ids).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn reorder_tasks(ids: Vec<String>, db: State<'_, Db>) -> Result<(), String> {
+    db.reorder_tasks(&ids).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn list_projects(db: State<'_, Db>) -> Result<Vec<ProjectDto>, String> {
+    db.list_projects().map_err(map_err)
+}
+
+#[tauri::command]
+pub fn create_project(
+    name: String,
+    color: Option<String>,
+    db: State<'_, Db>,
+) -> Result<ProjectDto, String> {
+    db.create_project(&name, color.as_deref()).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn update_project(
+    id: String,
+    name: String,
+    color: Option<String>,
+    db: State<'_, Db>,
+) -> Result<ProjectDto, String> {
+    db.update_project(&id, &name, color.as_deref())
+        .map_err(map_err)
+}
+
+#[tauri::command]
+pub fn delete_project(id: String, db: State<'_, Db>) -> Result<(), String> {
+    db.delete_project(&id).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn list_tags(db: State<'_, Db>) -> Result<Vec<TagDto>, String> {
+    db.list_tags().map_err(map_err)
+}
+
+#[tauri::command]
+pub fn create_tag(
+    name: String,
+    color: Option<String>,
+    db: State<'_, Db>,
+) -> Result<TagDto, String> {
+    db.create_tag(&name, color.as_deref()).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn delete_tag(id: String, db: State<'_, Db>) -> Result<(), String> {
+    db.delete_tag(&id).map_err(map_err)
 }

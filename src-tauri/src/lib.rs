@@ -1,13 +1,8 @@
-mod capture;
 mod commands;
-mod notes;
-mod query;
-mod search;
-mod watcher;
+mod db;
+mod models;
 
-use crate::notes::NotesStore;
-use std::path::Path;
-use std::sync::Arc;
+use crate::db::Db;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, WindowEvent};
@@ -15,47 +10,43 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let store = Arc::new(NotesStore::new());
-    let notes_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("CARGO_MANIFEST_DIR has no parent")
-        .join("notes");
-    store.load_all(&notes_dir);
-
-    let store_for_watcher = Arc::clone(&store);
-    let watcher_dir = notes_dir.clone();
-    let capture_dir = notes_dir.clone();
-
-    let toggle_shortcut = Shortcut::new(
-        Some(Modifiers::CONTROL | Modifiers::SHIFT),
-        Code::Space,
-    );
+    let toggle_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
     let toggle_shortcut_for_handler = toggle_shortcut.clone();
 
     tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, sc, event| {
-                    if event.state() == ShortcutState::Pressed
-                        && sc == &toggle_shortcut_for_handler
+                    if event.state() == ShortcutState::Pressed && sc == &toggle_shortcut_for_handler
                     {
                         toggle_main_window(app);
                     }
                 })
                 .build(),
         )
-        .manage(store)
         .invoke_handler(tauri::generate_handler![
-            commands::search,
-            commands::get_note,
-            commands::save_note,
-            commands::list_notes,
+            commands::list_tasks,
+            commands::create_task,
+            commands::update_task,
+            commands::delete_task,
+            commands::set_task_tags,
+            commands::reorder_tasks,
+            commands::list_projects,
+            commands::create_project,
+            commands::update_project,
+            commands::delete_project,
+            commands::list_tags,
+            commands::create_tag,
+            commands::delete_tag,
         ])
         .setup(move |app| {
+            let data_dir = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&data_dir)?;
+            let db = Db::open(&data_dir.join("taffk.db")).map_err(|e| e.to_string())?;
+            app.manage(db);
+
             app.global_shortcut().register(toggle_shortcut)?;
             build_tray(app.handle())?;
-            watcher::spawn(store_for_watcher, &watcher_dir, app.handle().clone());
-            capture::spawn(capture_dir.clone());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -131,4 +122,3 @@ fn toggle_main_window(app: &AppHandle) {
         }
     }
 }
-

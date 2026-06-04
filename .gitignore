@@ -17,3 +17,6 @@ Thumbs.db
 
 # Toolchain installer leftovers
 /rustup-init.exe
+
+# TypeScript incremental build info
+*.tsbuildinfo
