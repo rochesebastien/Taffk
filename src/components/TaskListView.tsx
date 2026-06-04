@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
+import { isTypingTarget } from '../lib/keyboard';
 import { QuickAdd } from './QuickAdd';
 import { TaskItem } from './TaskItem';
 import type { Task } from '../lib/api';
@@ -17,6 +18,9 @@ export function TaskListView() {
   const tasks = useStore((s) => s.tasks);
   const projects = useStore((s) => s.projects);
   const tags = useStore((s) => s.tags);
+  const toggleDone = useStore((s) => s.toggleDone);
+  const selectTask = useStore((s) => s.selectTask);
+  const drawerOpen = useStore((s) => s.selectedTaskId !== null);
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
@@ -36,8 +40,42 @@ export function TaskListView() {
     return [...list].sort(sortTasks);
   }, [tasks, view, activeProjectId]);
 
-  const open = filtered.filter((t) => !t.done);
-  const done = filtered.filter((t) => t.done);
+  const visible = useMemo(
+    () => [...filtered].sort((a, b) => Number(a.done) - Number(b.done)),
+    [filtered],
+  );
+  const open = visible.filter((t) => !t.done);
+  const done = visible.filter((t) => t.done);
+
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (focusedId && !visible.some((t) => t.id === focusedId)) setFocusedId(null);
+  }, [visible, focusedId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (drawerOpen || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      const ids = visible.map((t) => t.id);
+      if (ids.length === 0) return;
+      const idx = focusedId ? ids.indexOf(focusedId) : -1;
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedId(ids[Math.min(idx + 1, ids.length - 1)]);
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedId(ids[Math.max(idx - 1, 0)]);
+      } else if (e.key === 'x' && focusedId) {
+        const t = visible.find((v) => v.id === focusedId);
+        if (t) void toggleDone(t.id, !t.done);
+      } else if (e.key === 'Enter' && focusedId) {
+        e.preventDefault();
+        selectTask(focusedId);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible, focusedId, drawerOpen, toggleDone, selectTask]);
 
   return (
     <div className="list-view">
@@ -64,7 +102,13 @@ export function TaskListView() {
 
         <div className="task-group">
           {open.map((task) => (
-            <TaskItem key={task.id} task={task} projects={projects} tags={tags} />
+            <TaskItem
+              key={task.id}
+              task={task}
+              projects={projects}
+              tags={tags}
+              focused={task.id === focusedId}
+            />
           ))}
         </div>
 
@@ -72,7 +116,13 @@ export function TaskListView() {
           <div className="task-group done-group">
             <div className="group-label">Terminées</div>
             {done.map((task) => (
-              <TaskItem key={task.id} task={task} projects={projects} tags={tags} />
+              <TaskItem
+                key={task.id}
+                task={task}
+                projects={projects}
+                tags={tags}
+                focused={task.id === focusedId}
+              />
             ))}
           </div>
         )}

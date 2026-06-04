@@ -63,6 +63,6 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 
 ## Phase 7 — SuperProductivity inspiration (post-foundation)
 - [x] Subtasks (parent/child, drawer UI, progress badge, cascade)
-- [ ] Keyboard navigation & shortcuts (view switch, j/k select, x done, focus add, help)
+- [x] Keyboard navigation & shortcuts (1–4 views, A add, J/K/X/Enter, ? help overlay)
 - [ ] Repeating tasks (recurring) — candidate
 - [ ] Eisenhower matrix board layout — candidate

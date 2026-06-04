@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useStore } from '../lib/store';
 import type { Project, Tag, Task } from '../lib/api';
 
@@ -5,9 +6,10 @@ type Props = {
   task: Task;
   projects: Project[];
   tags: Tag[];
+  focused?: boolean;
 };
 
-export function TaskItem({ task, projects, tags }: Props) {
+export function TaskItem({ task, projects, tags, focused = false }: Props) {
   const toggleDone = useStore((s) => s.toggleDone);
   const deleteTask = useStore((s) => s.deleteTask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
@@ -24,8 +26,13 @@ export function TaskItem({ task, projects, tags }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const isToday = task.scheduledFor === today;
 
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView({ block: 'nearest' });
+  }, [focused]);
+
   return (
-    <div className={`task-item ${task.done ? 'is-done' : ''}`}>
+    <div ref={ref} className={`task-item ${task.done ? 'is-done' : ''} ${focused ? 'focused' : ''}`}>
       <button
         className={`task-check ${task.done ? 'checked' : ''}`}
         onClick={() => void toggleDone(task.id, !task.done)}

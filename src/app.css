@@ -1602,3 +1602,86 @@ body {
   border-style: solid;
   border-color: var(--border-focus);
 }
+
+/* ── Keyboard focus + help overlay ─────────────────────────────────────── */
+
+.task-item.focused {
+  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--border-focus);
+}
+
+.task-item.focused .task-actions {
+  opacity: 1;
+}
+
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fade-in 140ms ease;
+}
+
+.help-card {
+  width: 420px;
+  max-width: 92vw;
+  background: var(--surface-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.help-list {
+  padding: 8px 8px 12px;
+}
+
+.help-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.help-row:hover {
+  background: var(--surface-hover);
+}
+
+.help-keys {
+  flex-shrink: 0;
+  min-width: 64px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px 8px;
+}
+
+.help-label {
+  font-size: 13px;
+  color: var(--text-dim);
+}

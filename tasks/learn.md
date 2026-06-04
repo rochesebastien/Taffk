@@ -92,6 +92,18 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
   parent list items show a `⛁ done/total` badge; delete cascades locally to mirror
   the DB `ON DELETE CASCADE`.
 
+## Keyboard-first navigation
+
+- User stressed "tout au clavier". Global shortcuts live in App's window keydown
+  (guarded by `isTypingTarget` so they never fire while typing): `1–4` switch
+  views, `A`/`N` focus the add field (via a `taffk:focus-quickadd` window event
+  so it stays decoupled from the input), `?` toggles the help overlay, `Esc`
+  closes help/drawer. List nav (`j/k/x/Enter`) lives in TaskListView with a local
+  `focusedId` + a `.focused` ring and scroll-into-view.
+- **Removed `autoFocus` from QuickAdd**: otherwise the text field holds focus on
+  load and swallows every single-key shortcut. SP-style: press `A` to focus the
+  add field. This is the right trade-off for keyboard-first nav.
+
 ## Open follow-ups / known divergences
 
 - **`status` vs `done` — RESOLVED in kanban phase.** The store is now the single
