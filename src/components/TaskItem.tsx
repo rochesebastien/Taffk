@@ -11,6 +11,7 @@ export function TaskItem({ task, projects, tags }: Props) {
   const toggleDone = useStore((s) => s.toggleDone);
   const deleteTask = useStore((s) => s.deleteTask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
+  const selectTask = useStore((s) => s.selectTask);
 
   const project = projects.find((p) => p.id === task.projectId) ?? null;
   const taskTags = task.tagIds
@@ -30,7 +31,7 @@ export function TaskItem({ task, projects, tags }: Props) {
         {task.done && '✓'}
       </button>
 
-      <div className="task-body">
+      <div className="task-body" onClick={() => selectTask(task.id)}>
         <span className="task-title">{task.title}</span>
         <div className="task-meta">
           {project && (
@@ -45,6 +46,7 @@ export function TaskItem({ task, projects, tags }: Props) {
             </span>
           ))}
           {task.estimateMinutes > 0 && <span className="task-est">{task.estimateMinutes}m</span>}
+          {task.notes.trim() && <span className="task-note-flag" title="Contient des notes">❏</span>}
         </div>
       </div>
 

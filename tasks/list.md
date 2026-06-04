@@ -50,7 +50,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 - [ ] Dedicated tag filter / tag management UI (deferred — revisit with detail panel)
 
 ## Phase 5 — Incremental features (depth after foundation)
-- [ ] Task detail panel + markdown notes (CodeMirror React + preview)
+- [x] Task detail panel + markdown notes (CodeMirror React + preview)
 - [ ] Kanban board (status columns, drag/drop)
 - [ ] Pomodoro timer + time tracking (time_entries)
 - [ ] Calendar / scheduling view
