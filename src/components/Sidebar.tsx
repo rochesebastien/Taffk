@@ -55,6 +55,13 @@ export function Sidebar() {
           <span className="nav-label">Toutes les tâches</span>
           {allCount > 0 && <span className="nav-count">{allCount}</span>}
         </button>
+        <button
+          className={`nav-item ${view === 'board' ? 'active' : ''}`}
+          onClick={() => setView('board')}
+        >
+          <span className="nav-icon">▦</span>
+          <span className="nav-label">Tableau</span>
+        </button>
       </nav>
 
       <div className="sidebar-section">

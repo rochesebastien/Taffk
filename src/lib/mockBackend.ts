@@ -31,7 +31,7 @@ function seed() {
   };
   tasks = [
     { ...base, id: uid(), title: 'Préparer la revue de sprint', projectId: inbox.id, scheduledFor: today(), estimateMinutes: 30, sortOrder: 0, tagIds: [urgent.id] },
-    { ...base, id: uid(), title: 'Refondre la page d\'accueil', projectId: site.id, scheduledFor: today(), estimateMinutes: 90, sortOrder: 1, tagIds: [deep.id],
+    { ...base, id: uid(), title: 'Refondre la page d\'accueil', projectId: site.id, scheduledFor: today(), estimateMinutes: 90, sortOrder: 1, tagIds: [deep.id], status: 'in_progress',
       notes: '## Objectifs\n\n- Hero plus clair\n- **CTA** unique au-dessus de la ligne de flottaison\n- Retirer le carrousel\n\n```ts\nconst hero = { title: "Taffk", cta: "Essayer" };\n```\n\n> Inspiration : Linear, Capacities.' },
     { ...base, id: uid(), title: 'Répondre aux emails', projectId: inbox.id, scheduledFor: today(), sortOrder: 2, tagIds: [] },
     { ...base, id: uid(), title: 'Lire la doc Tauri SQL', projectId: site.id, scheduledFor: null, sortOrder: 3, tagIds: [deep.id] },

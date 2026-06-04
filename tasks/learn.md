@@ -62,10 +62,14 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
 
 ## Open follow-ups / known divergences
 
-- **`status` vs `done` on toggle.** The Rust `update_task` sets `done`/`completed_at`
-  but does NOT change `status` (stays 'todo'). The mock backend DOES set
-  status='done'. Harmless for Today/All views (they key off `done`), but the
-  kanban phase must decide the status↔done relationship and align both backends.
+- **`status` vs `done` — RESOLVED in kanban phase.** The store is now the single
+  source of truth: `toggleDone` sends `{done, status: done?'done':'todo'}` and
+  `moveTask` sends `{status, done: status==='done'}`. Both backends apply both
+  columns, so `done` and `status` never drift. `statusOf(task)` in KanbanBoard
+  treats `done` as authoritative (done ⇒ 'done' column).
+- **Native HTML5 drag-and-drop** for the board (no @dnd-kit dep). Note: Playwright
+  can't reliably simulate native DnD, so the board's drag was verified by reading
+  the handlers, not an automated drag test. Static render screenshotted.
 - **`create_task` sets `sort_order = 0`** for all new tasks (orders fall back to
   `created_at`). Mock uses `tasks.length`. Fine until drag-reorder; `reorder_tasks`
   sets explicit orders. Revisit when implementing kanban/list drag.
