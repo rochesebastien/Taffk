@@ -9,7 +9,10 @@ type Props = { task: Task };
 export function TaskDetail({ task }: Props) {
   const projects = useStore((s) => s.projects);
   const tags = useStore((s) => s.tags);
+  const tasks = useStore((s) => s.tasks);
   const patchTask = useStore((s) => s.patchTask);
+  const toggleDone = useStore((s) => s.toggleDone);
+  const addSubtask = useStore((s) => s.addSubtask);
   const setTaskTags = useStore((s) => s.setTaskTags);
   const addTag = useStore((s) => s.addTag);
   const deleteTask = useStore((s) => s.deleteTask);
@@ -19,6 +22,12 @@ export function TaskDetail({ task }: Props) {
 
   const [title, setTitle] = useState(task.title);
   const [tagDraft, setTagDraft] = useState('');
+  const [subDraft, setSubDraft] = useState('');
+
+  const subtasks = tasks
+    .filter((t) => t.parentId === task.id)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const subDone = subtasks.filter((t) => t.done).length;
 
   useEffect(() => {
     setTitle(task.title);
@@ -168,6 +177,54 @@ export function TaskDetail({ task }: Props) {
               }}
               onBlur={() => void addTagFromDraft()}
               placeholder="+ tag"
+            />
+          </div>
+
+          <div className="subtasks">
+            <div className="subtasks-head">
+              <span className="notes-label">Sous-tâches</span>
+              {subtasks.length > 0 && (
+                <span className="subtasks-count">
+                  {subDone}/{subtasks.length}
+                </span>
+              )}
+            </div>
+            {subtasks.length > 0 && (
+              <div className="subtasks-bar">
+                <div
+                  className="subtasks-bar-fill"
+                  style={{ width: `${(subDone / subtasks.length) * 100}%` }}
+                />
+              </div>
+            )}
+            <div className="subtasks-list">
+              {subtasks.map((s) => (
+                <div key={s.id} className={`subtask ${s.done ? 'is-done' : ''}`}>
+                  <button
+                    className={`task-check ${s.done ? 'checked' : ''}`}
+                    onClick={() => void toggleDone(s.id, !s.done)}
+                  >
+                    {s.done && '✓'}
+                  </button>
+                  <span className="subtask-title">{s.title}</span>
+                  <button className="subtask-del" title="Supprimer" onClick={() => void deleteTask(s.id)}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <input
+              className="subtask-add"
+              value={subDraft}
+              onChange={(e) => setSubDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void addSubtask(task.id, subDraft);
+                  setSubDraft('');
+                }
+              }}
+              placeholder="+ sous-tâche"
             />
           </div>
 

@@ -38,6 +38,13 @@ function seed() {
     { ...base, id: uid(), title: 'Lire la doc Tauri SQL', projectId: site.id, scheduledFor: null, sortOrder: 3, tagIds: [deep.id] },
     { ...base, id: uid(), title: 'Acheter un cadeau', projectId: inbox.id, scheduledFor: null, done: true, status: 'done', completedAt: now(), sortOrder: 4, tagIds: [] },
   ];
+
+  const parent = tasks[1]; // Refondre la page d'accueil
+  tasks.push(
+    { ...base, id: uid(), title: 'Maquette hero', projectId: parent.projectId, parentId: parent.id, done: true, status: 'done', completedAt: now(), scheduledFor: null, sortOrder: 0, tagIds: [] },
+    { ...base, id: uid(), title: 'Intégrer le nouveau CTA', projectId: parent.projectId, parentId: parent.id, scheduledFor: null, sortOrder: 1, tagIds: [] },
+    { ...base, id: uid(), title: 'Supprimer le carrousel', projectId: parent.projectId, parentId: parent.id, scheduledFor: null, sortOrder: 2, tagIds: [] },
+  );
 }
 seed();
 

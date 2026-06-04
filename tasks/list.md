@@ -60,3 +60,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 - [x] Update `DESIGN.md` if layout changes
 - [x] Remove dead files (generate_test_notes.py, capture, etc.)
 - [x] Final build/check + push
+
+## Phase 7 — SuperProductivity inspiration (post-foundation)
+- [x] Subtasks (parent/child, drawer UI, progress badge, cascade)
+- [ ] Keyboard navigation & shortcuts (view switch, j/k select, x done, focus add, help)
+- [ ] Repeating tasks (recurring) — candidate
+- [ ] Eisenhower matrix board layout — candidate

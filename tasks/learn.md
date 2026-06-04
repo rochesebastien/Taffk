@@ -73,6 +73,25 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
   auto-rolls into a break; break ends to idle. Durations default 25/5, settings
   UI deferred (`setDurations` action exists for later).
 
+## Gotcha: Zustand selectors must not return fresh objects
+
+- A `useStore` selector that returns a NEW object/array each call (e.g.
+  `(s) => ({ done, total })`) makes `useSyncExternalStore` loop infinitely and
+  blanks the page (caught via a blank screenshot — the build/typecheck were
+  green, so screenshots are a real safety net the compiler isn't). Fix: select
+  primitives (numbers/strings) and assemble the object in the component body.
+  `s.tasks.find(...)` is fine — it returns an existing reference.
+
+## SuperProductivity inspiration round (post-foundation)
+
+- Grounded via web search of SP's feature set. Picked the items best matching
+  the user's "keyboard-first" emphasis and SP's core, highest ROI:
+  subtasks (schema `parent_id` was ready) and keyboard navigation/shortcuts.
+- Subtasks: managed in the parent's detail drawer (list + progress bar + add);
+  excluded from top-level lists/board/planner (filtered `parentId === null`);
+  parent list items show a `⛁ done/total` badge; delete cascades locally to mirror
+  the DB `ON DELETE CASCADE`.
+
 ## Open follow-ups / known divergences
 
 - **`status` vs `done` — RESOLVED in kanban phase.** The store is now the single

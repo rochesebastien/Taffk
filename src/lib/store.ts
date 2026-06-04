@@ -44,6 +44,7 @@ type Store = {
   selectTask: (id: string | null) => void;
 
   quickAdd: (raw: string, opts?: { scheduleToday?: boolean; date?: string | null }) => Promise<void>;
+  addSubtask: (parentId: string, title: string) => Promise<void>;
   toggleDone: (id: string, done: boolean) => Promise<void>;
   moveTask: (id: string, status: TaskStatus) => Promise<void>;
   patchTask: (patch: TaskPatch) => Promise<void>;
@@ -110,6 +111,18 @@ export const useStore = create<Store>((set, get) => ({
     set({ tasks: [...get().tasks, task] });
   },
 
+  async addSubtask(parentId, title) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const parent = get().tasks.find((t) => t.id === parentId);
+    const task = await api.createTask({
+      title: trimmed,
+      parentId,
+      projectId: parent?.projectId ?? null,
+    });
+    set({ tasks: [...get().tasks, task] });
+  },
+
   async toggleDone(id, done) {
     const task = await api.updateTask({ id, done, status: done ? 'done' : 'todo' });
     set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
@@ -127,8 +140,9 @@ export const useStore = create<Store>((set, get) => ({
 
   async deleteTask(id) {
     await api.deleteTask(id);
+    // Backend cascades on parent_id; mirror that locally.
     set({
-      tasks: get().tasks.filter((t) => t.id !== id),
+      tasks: get().tasks.filter((t) => t.id !== id && t.parentId !== id),
       selectedTaskId: get().selectedTaskId === id ? null : get().selectedTaskId,
     });
   },

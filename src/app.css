@@ -1483,3 +1483,122 @@ body {
   font-size: 12px;
   outline: none;
 }
+
+/* ── Subtasks ──────────────────────────────────────────────────────────── */
+
+.task-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.task-sub.complete {
+  color: #22c55e;
+}
+
+.subtasks {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.subtasks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subtasks-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.subtasks-bar {
+  height: 3px;
+  background: var(--surface-hover);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.subtasks-bar-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 2px;
+  transition: width 180ms ease;
+}
+
+.subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.subtask {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 4px;
+  border-radius: 7px;
+}
+
+.subtask:hover {
+  background: var(--surface-hover);
+}
+
+.subtask .task-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 0;
+}
+
+.subtask-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtask.is-done .subtask-title {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.subtask-del {
+  border: none;
+  background: transparent;
+  color: var(--text-whisper);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.subtask:hover .subtask-del {
+  opacity: 1;
+}
+
+.subtask-del:hover {
+  color: #ef4444;
+}
+
+.subtask-add {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.subtask-add:focus {
+  border-style: solid;
+  border-color: var(--border-focus);
+}

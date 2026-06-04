@@ -19,8 +19,9 @@ export function Sidebar() {
   const [name, setName] = useState('');
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayCount = tasks.filter((t) => !t.done && t.scheduledFor === today).length;
-  const allCount = tasks.filter((t) => !t.done).length;
+  const top = tasks.filter((t) => t.parentId === null);
+  const todayCount = top.filter((t) => !t.done && t.scheduledFor === today).length;
+  const allCount = top.filter((t) => !t.done).length;
 
   async function submitProject(e: React.FormEvent) {
     e.preventDefault();
@@ -81,7 +82,7 @@ export function Sidebar() {
         </div>
         <div className="project-list">
           {projects.map((p) => {
-            const count = tasks.filter((t) => !t.done && t.projectId === p.id).length;
+            const count = top.filter((t) => !t.done && t.projectId === p.id).length;
             return (
               <button
                 key={p.id}

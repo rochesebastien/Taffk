@@ -19,9 +19,10 @@ export function CalendarView() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(anchor, i)), [anchor]);
   const today = todayIso();
 
-  const backlog = tasks.filter((t) => !t.done && !t.scheduledFor);
+  const topLevel = tasks.filter((t) => t.parentId === null);
+  const backlog = topLevel.filter((t) => !t.done && !t.scheduledFor);
   const byDay = (iso: string) =>
-    tasks
+    topLevel
       .filter((t) => t.scheduledFor === iso)
       .sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
 

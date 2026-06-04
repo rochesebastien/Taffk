@@ -40,7 +40,9 @@ export function KanbanBoard() {
         <div className="list-titles">
           <h1 className="list-title">Tableau</h1>
         </div>
-        <div className="list-stats">{tasks.filter((t) => !t.done).length} en cours</div>
+        <div className="list-stats">
+          {tasks.filter((t) => t.parentId === null && !t.done).length} en cours
+        </div>
       </header>
 
       <div className="board-quickadd">
@@ -50,7 +52,7 @@ export function KanbanBoard() {
       <div className="board-columns">
         {COLUMNS.map((col) => {
           const colTasks = tasks
-            .filter((t) => statusOf(t) === col.status)
+            .filter((t) => t.parentId === null && statusOf(t) === col.status)
             .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
           return (
             <div

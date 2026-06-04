@@ -12,6 +12,9 @@ export function TaskItem({ task, projects, tags }: Props) {
   const deleteTask = useStore((s) => s.deleteTask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
+  const subTotal = useStore((s) => s.tasks.filter((t) => t.parentId === task.id).length);
+  const subDone = useStore((s) => s.tasks.filter((t) => t.parentId === task.id && t.done).length);
+  const sub = subTotal > 0 ? { done: subDone, total: subTotal } : null;
 
   const project = projects.find((p) => p.id === task.projectId) ?? null;
   const taskTags = task.tagIds
@@ -46,6 +49,11 @@ export function TaskItem({ task, projects, tags }: Props) {
             </span>
           ))}
           {task.estimateMinutes > 0 && <span className="task-est">{task.estimateMinutes}m</span>}
+          {sub && (
+            <span className={`task-sub ${sub.done === sub.total ? 'complete' : ''}`} title="Sous-tâches">
+              ⛁ {sub.done}/{sub.total}
+            </span>
+          )}
           {task.notes.trim() && <span className="task-note-flag" title="Contient des notes">❏</span>}
         </div>
       </div>
