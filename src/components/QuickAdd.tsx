@@ -20,21 +20,24 @@ export function QuickAdd({ scheduleToday, placeholder }: Props) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!value.trim()) return;
     const raw = value;
-    if (!raw.trim()) return;
     setValue('');
     await quickAdd(raw, { scheduleToday });
   }
 
   return (
-    <form className="quick-add" onSubmit={submit}>
-      <span className="quick-add-plus"><Plus size={17} /></span>
+    <form
+      onSubmit={submit}
+      className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 transition-colors focus-within:border-ring focus-within:bg-background"
+    >
+      <Plus size={17} className="shrink-0 text-muted-foreground" />
       <input
         ref={inputRef}
-        className="quick-add-input"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder ?? 'Ajouter une tâche…  (A)'}
+        className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/60"
       />
     </form>
   );

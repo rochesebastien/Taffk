@@ -5,6 +5,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CalendarView } from './components/CalendarView';
 import { TaskDetail } from './components/TaskDetail';
 import { KeyboardHelp } from './components/KeyboardHelp';
+import { TooltipProvider } from './components/ui/tooltip';
 import { useStore, type View } from './lib/store';
 import { isTypingTarget } from './lib/keyboard';
 
@@ -48,21 +49,23 @@ export default function App() {
   }, [helpOpen, selectedTaskId, selectTask, setView]);
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main className="app-main">
-        {!loaded ? (
-          <div className="app-loading">…</div>
-        ) : view === 'board' ? (
-          <KanbanBoard />
-        ) : view === 'calendar' ? (
-          <CalendarView />
-        ) : (
-          <TaskListView />
-        )}
-      </main>
-      {selectedTask && <TaskDetail task={selectedTask} />}
-      {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
-    </div>
+    <TooltipProvider delayDuration={300}>
+      <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+        <Sidebar />
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {!loaded ? (
+            <div className="grid h-full place-items-center text-muted-foreground/60">…</div>
+          ) : view === 'board' ? (
+            <KanbanBoard />
+          ) : view === 'calendar' ? (
+            <CalendarView />
+          ) : (
+            <TaskListView />
+          )}
+        </main>
+        {selectedTask && <TaskDetail task={selectedTask} />}
+        {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
+      </div>
+    </TooltipProvider>
   );
 }

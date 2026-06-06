@@ -6,18 +6,14 @@ const KEY = 'taffk.theme';
 
 function read(): Theme {
   const stored = localStorage.getItem(KEY);
-  return stored === 'light' ? 'light' : 'dark';
+  return stored === 'dark' ? 'dark' : 'light';
 }
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(read);
 
   useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
+    document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem(KEY, theme);
   }, [theme]);
 

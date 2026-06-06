@@ -16,11 +16,17 @@ file owned by the Rust backend.
 - **Frontend**: React 19 + TypeScript strict + `verbatimModuleSyntax`, Vite 5.
   State via **Zustand**. No router — top-level views switch on a `view` field
   in the store.
+- **Styling**: **Tailwind CSS v4** (Vite plugin, CSS-first config in `index.css`)
+  + **shadcn/ui** (`components/ui/*`, new-york style, Radix under the hood). Design
+  direction is flat & light (Notion/Codex). `lucide-react` for icons. Bricolage
+  Grotesque (`font-display`) for view titles, Geist for body, Geist Mono for code.
 - **Storage**: **SQLite** via `rusqlite` (bundled feature → no system SQLite).
   The Rust backend owns the connection and exposes IPC commands. No ORM, no
   migration framework — one idempotent `CREATE TABLE IF NOT EXISTS` bootstrap.
 - **Editor / preview**: CodeMirror 6 (`@uiw/react-codemirror`, `@codemirror/lang-markdown`,
   `oneDark`) for task notes; `markdown-it` for the preview.
+- **Calendar**: `react-big-calendar` + the drag-and-drop addon (week/day views,
+  drag-to-move and resize-to-extend events), localized with `date-fns` (fr).
 
 ## Where we are
 
@@ -32,7 +38,10 @@ Migration + refactor complete. Landed slices:
 - [x] **Kanban board** — status columns with native drag-and-drop.
 - [x] **Pomodoro + time tracking** — focus timer (sidebar), `time_entries`,
   per-task `spent_minutes`.
-- [x] **Week planner** — 7-day calendar, drag-to-reschedule, backlog, per-day add.
+- [x] **Week planner** — `react-big-calendar` week/day grid: drag-to-move,
+  resize-to-extend, click-empty-slot to create, click event to open detail.
+- [x] **UI refonte** — Tailwind v4 + shadcn/ui, flat light/dark theme (Notion/Codex),
+  centered task cards. `app.css` removed; tokens live in `index.css`.
 
 Roadmap items beyond this live in `/tasks/list.md` and the issue tracker.
 
@@ -48,22 +57,27 @@ src-tauri/src/
   models.rs     — serde DTOs (camelCase) + input structs (NewTask, TaskPatch)
   commands.rs   — #[tauri::command] CRUD surface (tasks/projects/tags/time)
 src/
-  App.tsx           — shell (sidebar + main), view switch, detail drawer, Esc
-  app.css           — design tokens (dark + [data-theme='light']) + every rule
-                      (sidebar/list/board/calendar/detail/pomodoro + .preview prose)
-  main.tsx          — React root
+  App.tsx           — shell (sidebar + main, flat), view switch, detail drawer, Esc
+  index.css         — Tailwind entry: @theme tokens + shadcn palette (:root + .dark,
+                      flat Notion/Codex), fonts, base layer. THE styling source.
+  main.tsx          — React root (imports index.css only)
   lib/
     api.ts          — THE boundary. Typed invoke wrappers + DTO types mirroring
                       Rust field-for-field. Falls back to mockBackend outside Tauri.
     mockBackend.ts  — in-memory Backend impl for browser preview/screenshots
     store.ts        — Zustand data store (tasks/projects/tags + UI state, quick-add)
     pomodoro.ts     — Zustand timer store (separate; survives view changes)
-    theme.ts        — dark/light, persisted in localStorage (taffk.theme)
+    theme.ts        — dark/light via `.dark` class on <html>, persisted (taffk.theme)
     markdown.ts     — markdown-it instance
     dates.ts        — local-date (non-UTC) helpers for scheduling
+    utils.ts        — `cn()` (clsx + tailwind-merge)
   components/
+    ui/             — shadcn primitives (button, input, checkbox, select, sheet,
+                      dropdown-menu, scroll-area, separator, tooltip, badge, progress)
     Sidebar / TaskListView / TaskItem / QuickAdd / TaskDetail / MarkdownNotes /
-    KanbanBoard / CalendarView / PomodoroWidget
+    KanbanBoard / CalendarView / PomodoroWidget / KeyboardHelp
+    markdown.css        — rendered-markdown (.preview) prose, themed via shadcn tokens
+    calendar-theme.css  — react-big-calendar overrides, themed via shadcn tokens
 ```
 
 `src/lib/api.ts` is the only seam between front and Rust. Types here mirror the
@@ -86,7 +100,9 @@ is created up front so planned features need no migration. A task carries
   target column. Don't set one without the other.
 - **No backwards-compat shims** during a slice — just edit the code.
 - **Commit messages**: `<type>(<scope>): <subject>` + body explaining the *why*.
-- **Design tokens**: use the CSS variables in `app.css`; never hardcode colors.
+- **Styling**: Tailwind utilities + shadcn tokens (`bg-background`, `text-muted-foreground`,
+  `border-border`, `bg-primary`…). Never hardcode colors. Tokens are defined in
+  `index.css`; add a new shadcn component with `npx shadcn@latest add <name>`.
 
 ## Git policy
 
@@ -123,7 +139,10 @@ cd src-tauri && cargo test     # Rust unit tests
   store so it survives view changes.
 - **Dates**: use `lib/dates.ts` (local Y-M-D), not `toISOString().slice(0,10)`
   in new code paths — the latter is UTC and can be off by a day near midnight.
-- **CodeMirror stays `oneDark`** in both themes (light editor theme deferred).
+- **CodeMirror stays `oneDark`** in both themes (light editor theme deferred) — a
+  dark notes box on the light theme is a known, accepted gap.
+- **Theme** toggles the `.dark` class on `<html>` (shadcn convention); light is the
+  default. Path alias `@/*` → `src/*` (tsconfig + vite).
 
 ## Don'ts
 

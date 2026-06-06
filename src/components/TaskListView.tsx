@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { isTypingTarget } from '../lib/keyboard';
+import { todayIso } from '../lib/dates';
 import { QuickAdd } from './QuickAdd';
 import { TaskItem } from './TaskItem';
 import type { Task } from '../lib/api';
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 function sortTasks(a: Task, b: Task) {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -32,18 +31,14 @@ export function TaskListView() {
       ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
       : null;
 
-  const filtered = useMemo(() => {
-    const t = today();
+  const visible = useMemo(() => {
+    const t = todayIso();
     let list = tasks.filter((x) => x.parentId === null);
     if (view === 'today') list = list.filter((x) => x.scheduledFor === t);
     else if (view === 'project') list = list.filter((x) => x.projectId === activeProjectId);
-    return [...list].sort(sortTasks);
+    return [...list].sort((a, b) => Number(a.done) - Number(b.done) || sortTasks(a, b));
   }, [tasks, view, activeProjectId]);
 
-  const visible = useMemo(
-    () => [...filtered].sort((a, b) => Number(a.done) - Number(b.done)),
-    [filtered],
-  );
   const open = visible.filter((t) => !t.done);
   const done = visible.filter((t) => t.done);
 
@@ -78,54 +73,46 @@ export function TaskListView() {
   }, [visible, focusedId, drawerOpen, toggleDone, selectTask]);
 
   return (
-    <div className="list-view">
-      <header className="list-header">
-        <div className="list-titles">
-          <h1 className="list-title">{title}</h1>
-          {subtitle && <span className="list-subtitle">{subtitle}</span>}
+    <div className="flex h-full flex-col">
+      <header className="mx-auto flex w-full max-w-3xl items-end justify-between gap-4 px-6 pb-4 pt-8">
+        <div className="flex items-baseline gap-3">
+          <h1 className="font-display text-3xl font-bold tracking-tight">{title}</h1>
+          {subtitle && <span className="text-sm capitalize text-muted-foreground/70">{subtitle}</span>}
         </div>
-        <div className="list-stats">
-          <span>{open.length} en cours</span>
-          {done.length > 0 && <span className="muted">· {done.length} faites</span>}
+        <div className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+          {open.length} en cours
+          {done.length > 0 && <span className="text-muted-foreground/50"> · {done.length} faites</span>}
         </div>
       </header>
 
-      <QuickAdd scheduleToday={view === 'today'} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl px-6 pb-10">
+          <QuickAdd scheduleToday={view === 'today'} />
 
-      <div className="task-scroll">
-        {open.length === 0 && done.length === 0 && (
-          <div className="empty-state">
-            <p>Rien ici pour l'instant.</p>
-            <p className="muted">Ajoute une tâche ci-dessus — appuie sur Entrée.</p>
-          </div>
-        )}
+          {open.length === 0 && done.length === 0 ? (
+            <div className="py-16 text-center text-muted-foreground">
+              <p>Rien ici pour l'instant.</p>
+              <p className="mt-1 text-sm text-muted-foreground/60">Ajoute une tâche ci-dessus — appuie sur Entrée.</p>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-col gap-2">
+              {open.map((task) => (
+                <TaskItem key={task.id} task={task} projects={projects} tags={tags} focused={task.id === focusedId} />
+              ))}
+            </div>
+          )}
 
-        <div className="task-group">
-          {open.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
-              projects={projects}
-              tags={tags}
-              focused={task.id === focusedId}
-            />
-          ))}
+          {done.length > 0 && (
+            <div className="mt-2 flex flex-col gap-2">
+              <div className="px-1 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Terminées
+              </div>
+              {done.map((task) => (
+                <TaskItem key={task.id} task={task} projects={projects} tags={tags} focused={task.id === focusedId} />
+              ))}
+            </div>
+          )}
         </div>
-
-        {done.length > 0 && (
-          <div className="task-group done-group">
-            <div className="group-label">Terminées</div>
-            {done.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                projects={projects}
-                tags={tags}
-                focused={task.id === focusedId}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

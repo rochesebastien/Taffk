@@ -1,0 +1,114 @@
+/* react-big-calendar — themed to the flat Notion/Codex tokens.
+   Imported after the library CSS so these rules win by source order. */
+.rbc-calendar {
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--foreground);
+}
+
+.rbc-time-view,
+.rbc-month-view {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--background);
+}
+
+.rbc-time-view {
+  border-bottom: none;
+}
+
+.rbc-time-header.rbc-overflowing,
+.rbc-time-header-content,
+.rbc-time-content,
+.rbc-day-bg + .rbc-day-bg,
+.rbc-month-row + .rbc-month-row,
+.rbc-header + .rbc-header,
+.rbc-timeslot-group,
+.rbc-time-gutter,
+.rbc-time-header-gutter,
+.rbc-day-slot,
+.rbc-time-content > * + * > * {
+  border-color: var(--border) !important;
+}
+
+.rbc-header {
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.rbc-time-content {
+  border-top: 1px solid var(--border);
+}
+
+.rbc-time-slot {
+  border-top-color: color-mix(in oklab, var(--border) 55%, transparent) !important;
+}
+
+.rbc-label,
+.rbc-time-gutter .rbc-timeslot-group {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.rbc-today {
+  background: color-mix(in oklab, var(--primary) 6%, transparent);
+}
+
+.rbc-current-time-indicator {
+  height: 2px;
+  background: var(--primary);
+}
+
+.rbc-event,
+.rbc-day-slot .rbc-event {
+  border: none;
+  border-left: 3px solid color-mix(in oklab, var(--primary) 70%, black);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.rbc-event:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.rbc-event-label {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.rbc-event-done {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.rbc-event.rbc-selected {
+  filter: brightness(0.95);
+}
+
+.rbc-slot-selection {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+  border-radius: 6px;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: none !important;
+}
+
+.rbc-allday-cell {
+  max-height: 80px;
+}
+
+.rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor {
+  cursor: ns-resize;
+}

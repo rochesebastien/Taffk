@@ -1,10 +1,47 @@
 import { useState } from 'react';
-import { CalendarCheck, CalendarDays, Columns3, ListTodo, Moon, Plus, Sun } from 'lucide-react';
-import { useStore } from '../lib/store';
+import {
+  CalendarCheck,
+  CalendarDays,
+  Columns3,
+  ListTodo,
+  Moon,
+  Plus,
+  Sun,
+  type LucideIcon,
+} from 'lucide-react';
+import { useStore, type View } from '../lib/store';
 import { useTheme } from '../lib/theme';
+import { todayIso } from '../lib/dates';
+import { cn } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
 import logoDark from '../assets/logo_navbar_dark.png';
 import logoLight from '../assets/logo_navbar_light.png';
+
+type NavItemProps = {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  count?: number;
+  onClick: () => void;
+};
+
+function NavItem({ icon: Icon, label, active, count, onClick }: NavItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors',
+        active
+          ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+      )}
+    >
+      <Icon size={17} className={cn('shrink-0', active ? 'text-primary' : 'text-muted-foreground')} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
+    </button>
+  );
+}
 
 export function Sidebar() {
   const { theme, toggle } = useTheme();
@@ -19,7 +56,7 @@ export function Sidebar() {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const top = tasks.filter((t) => t.parentId === null);
   const todayCount = top.filter((t) => !t.done && t.scheduledFor === today).length;
   const allCount = top.filter((t) => !t.done).length;
@@ -35,86 +72,97 @@ export function Sidebar() {
     setAdding(false);
   }
 
+  const nav: { view: View; icon: LucideIcon; label: string; count?: number }[] = [
+    { view: 'today', icon: CalendarCheck, label: "Aujourd'hui", count: todayCount },
+    { view: 'all', icon: ListTodo, label: 'Toutes les tâches', count: allCount },
+    { view: 'board', icon: Columns3, label: 'Tableau' },
+    { view: 'calendar', icon: CalendarDays, label: 'Planning' },
+  ];
+
   return (
-    <aside className="sidebar">
-      <div className="sidebar-head">
-        <img className="sidebar-logo" src={theme === 'light' ? logoLight : logoDark} alt="Taffk" />
+    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground">
+      <div className="px-2 pb-4">
+        <img className="h-8 w-auto" src={theme === 'light' ? logoDark : logoLight} alt="Taffk" />
       </div>
 
-      <nav className="sidebar-nav">
-        <button
-          className={`nav-item ${view === 'today' ? 'active' : ''}`}
-          onClick={() => setView('today')}
-        >
-          <span className="nav-icon"><CalendarCheck size={17} /></span>
-          <span className="nav-label">Aujourd'hui</span>
-          {todayCount > 0 && <span className="nav-count">{todayCount}</span>}
-        </button>
-        <button
-          className={`nav-item ${view === 'all' ? 'active' : ''}`}
-          onClick={() => setView('all')}
-        >
-          <span className="nav-icon"><ListTodo size={17} /></span>
-          <span className="nav-label">Toutes les tâches</span>
-          {allCount > 0 && <span className="nav-count">{allCount}</span>}
-        </button>
-        <button
-          className={`nav-item ${view === 'board' ? 'active' : ''}`}
-          onClick={() => setView('board')}
-        >
-          <span className="nav-icon"><Columns3 size={17} /></span>
-          <span className="nav-label">Tableau</span>
-        </button>
-        <button
-          className={`nav-item ${view === 'calendar' ? 'active' : ''}`}
-          onClick={() => setView('calendar')}
-        >
-          <span className="nav-icon"><CalendarDays size={17} /></span>
-          <span className="nav-label">Planning</span>
-        </button>
+      <nav className="flex flex-col gap-0.5">
+        {nav.map((n) => (
+          <NavItem
+            key={n.view}
+            icon={n.icon}
+            label={n.label}
+            count={n.count}
+            active={view === n.view}
+            onClick={() => setView(n.view)}
+          />
+        ))}
       </nav>
 
-      <div className="sidebar-section">
-        <div className="sidebar-section-head">
-          <span>Projets</span>
-          <button className="icon-btn" title="Nouveau projet" onClick={() => setAdding(true)}>
+      <div className="mt-6 flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between px-2.5 pb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Projets
+          </span>
+          <button
+            className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            title="Nouveau projet"
+            onClick={() => setAdding(true)}
+          >
             <Plus size={15} />
           </button>
         </div>
-        <div className="project-list">
+
+        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
           {projects.map((p) => {
             const count = top.filter((t) => !t.done && t.projectId === p.id).length;
+            const active = view === 'project' && activeProjectId === p.id;
             return (
               <button
                 key={p.id}
-                className={`nav-item ${view === 'project' && activeProjectId === p.id ? 'active' : ''}`}
                 onClick={() => openProject(p.id)}
+                className={cn(
+                  'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors',
+                  active
+                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                )}
               >
-                <span className="project-dot" style={{ background: p.color ?? 'var(--text-faint)' }} />
-                <span className="nav-label">{p.name}</span>
-                {count > 0 && <span className="nav-count">{count}</span>}
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: p.color ?? 'var(--muted-foreground)' }}
+                />
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                {count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
               </button>
             );
           })}
           {adding && (
-            <form onSubmit={submitProject} className="project-add-form">
+            <form onSubmit={submitProject} className="px-1 py-1">
               <input
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={submitProject}
                 placeholder="Nom du projet"
-                className="project-add-input"
+                className="w-full rounded-md border border-ring/60 bg-background px-2.5 py-1.5 text-sm outline-none"
               />
             </form>
           )}
         </div>
       </div>
 
-      <div className="sidebar-foot">
+      <div className="mt-2 flex flex-col gap-1 border-t border-sidebar-border pt-3">
         <PomodoroWidget />
-        <button className="foot-btn" onClick={toggle} title="Changer de thème">
-          {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+        <button
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+          onClick={toggle}
+          title="Changer de thème"
+        >
+          {theme === 'dark' ? (
+            <Moon size={16} className="text-muted-foreground" />
+          ) : (
+            <Sun size={16} className="text-muted-foreground" />
+          )}
           <span>{theme === 'dark' ? 'Sombre' : 'Clair'}</span>
         </button>
       </div>

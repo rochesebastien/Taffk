@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Pause, Play, Square } from 'lucide-react';
 import { usePomodoro } from '../lib/pomodoro';
 import { useStore } from '../lib/store';
+import { cn } from '../lib/utils';
 
 function clock(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -41,43 +42,52 @@ export function PomodoroWidget() {
   }, [running]);
 
   const progress = duration > 0 ? 1 - remaining / duration : 0;
-  const idle = phase === 'idle';
+  const isWork = phase === 'work';
 
   return (
-    <div className={`pomo ${phase}`}>
-      {idle ? (
-        <button className="pomo-start" onClick={() => startWork(null)}>
-          <span className="pomo-start-icon"><Play size={11} /></span>
+    <div className="px-1 pb-1">
+      {phase === 'idle' ? (
+        <button
+          onClick={() => startWork(null)}
+          className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-ring hover:bg-accent hover:text-foreground"
+        >
+          <Play size={11} className="text-primary" />
           Démarrer le focus
-          <span className="pomo-start-time">25:00</span>
+          <span className="ml-auto font-mono text-xs text-muted-foreground/70">25:00</span>
         </button>
       ) : (
-        <div className="pomo-active">
-          <div className="pomo-row">
-            <span className="pomo-phase">{phase === 'work' ? 'Focus' : 'Pause'}</span>
-            <span className="pomo-time">{clock(remaining)}</span>
+        <div className={cn('rounded-lg border border-border bg-muted/40 px-3 py-2', isWork && 'border-ring/50')}>
+          <div className="flex items-baseline justify-between">
+            <span className={cn('text-[10px] font-semibold uppercase tracking-widest', isWork ? 'text-primary' : 'text-muted-foreground')}>
+              {isWork ? 'Focus' : 'Pause'}
+            </span>
+            <span className="font-mono text-lg font-medium tabular-nums">{clock(remaining)}</span>
           </div>
-          <div className="pomo-bar">
-            <div className="pomo-bar-fill" style={{ width: `${progress * 100}%` }} />
+          <div className="my-2 h-1 overflow-hidden rounded-full bg-accent">
+            <div className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear" style={{ width: `${progress * 100}%` }} />
           </div>
-          <div className="pomo-controls">
-            {running ? (
-              <button className="pomo-btn" onClick={pause} title="Pause">
-                <Pause size={13} />
-              </button>
-            ) : (
-              <button className="pomo-btn" onClick={resume} title="Reprendre">
-                <Play size={13} />
-              </button>
-            )}
-            <button className="pomo-btn" onClick={stop} title="Arrêter">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={running ? pause : resume}
+              title={running ? 'Pause' : 'Reprendre'}
+              className="grid size-6 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-border/70 hover:bg-accent hover:text-foreground"
+            >
+              {running ? <Pause size={13} /> : <Play size={13} />}
+            </button>
+            <button
+              onClick={stop}
+              title="Arrêter"
+              className="grid size-6 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-border/70 hover:bg-accent hover:text-foreground"
+            >
               <Square size={12} />
             </button>
-            {phase === 'work' && focusTitle && <span className="pomo-task">{focusTitle}</span>}
+            {isWork && focusTitle && <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{focusTitle}</span>}
           </div>
         </div>
       )}
-      <div className="pomo-today">Aujourd'hui · {humanToday(todaySeconds)}</div>
+      <div className="mt-2 px-1 font-mono text-[10.5px] text-muted-foreground/60">
+        Aujourd'hui · {humanToday(todaySeconds)}
+      </div>
     </div>
   );
 }
