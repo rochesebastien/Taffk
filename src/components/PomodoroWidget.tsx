@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Pause, Play, Square } from 'lucide-react';
 import { usePomodoro } from '../lib/pomodoro';
 import { useStore } from '../lib/store';
 
@@ -46,7 +47,7 @@ export function PomodoroWidget() {
     <div className={`pomo ${phase}`}>
       {idle ? (
         <button className="pomo-start" onClick={() => startWork(null)}>
-          <span className="pomo-start-icon">▶</span>
+          <span className="pomo-start-icon"><Play size={11} /></span>
           Démarrer le focus
           <span className="pomo-start-time">25:00</span>
         </button>
@@ -62,15 +63,15 @@ export function PomodoroWidget() {
           <div className="pomo-controls">
             {running ? (
               <button className="pomo-btn" onClick={pause} title="Pause">
-                ⏸
+                <Pause size={13} />
               </button>
             ) : (
               <button className="pomo-btn" onClick={resume} title="Reprendre">
-                ▶
+                <Play size={13} />
               </button>
             )}
             <button className="pomo-btn" onClick={stop} title="Arrêter">
-              ■
+              <Square size={12} />
             </button>
             {phase === 'work' && focusTitle && <span className="pomo-task">{focusTitle}</span>}
           </div>

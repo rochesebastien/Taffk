@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Check, FileText, ListChecks, Sun, X } from 'lucide-react';
 import { useStore } from '../lib/store';
 import type { Project, Tag, Task } from '../lib/api';
 
@@ -38,7 +39,7 @@ export function TaskItem({ task, projects, tags, focused = false }: Props) {
         onClick={() => void toggleDone(task.id, !task.done)}
         aria-label={task.done ? 'Marquer non faite' : 'Marquer faite'}
       >
-        {task.done && '✓'}
+        {task.done && <Check size={13} strokeWidth={3} />}
       </button>
 
       <div className="task-body" onClick={() => selectTask(task.id)}>
@@ -58,10 +59,14 @@ export function TaskItem({ task, projects, tags, focused = false }: Props) {
           {task.estimateMinutes > 0 && <span className="task-est">{task.estimateMinutes}m</span>}
           {sub && (
             <span className={`task-sub ${sub.done === sub.total ? 'complete' : ''}`} title="Sous-tâches">
-              ⛁ {sub.done}/{sub.total}
+              <ListChecks size={13} /> {sub.done}/{sub.total}
             </span>
           )}
-          {task.notes.trim() && <span className="task-note-flag" title="Contient des notes">❏</span>}
+          {task.notes.trim() && (
+            <span className="task-note-flag" title="Contient des notes">
+              <FileText size={14} />
+            </span>
+          )}
         </div>
       </div>
 
@@ -72,11 +77,11 @@ export function TaskItem({ task, projects, tags, focused = false }: Props) {
             title={isToday ? "Retirer d'aujourd'hui" : "Planifier aujourd'hui"}
             onClick={() => void scheduleForToday(task.id, !isToday)}
           >
-            ◎
+            <Sun size={15} />
           </button>
         )}
         <button className="task-action danger" title="Supprimer" onClick={() => void deleteTask(task.id)}>
-          ✕
+          <X size={15} />
         </button>
       </div>
     </div>

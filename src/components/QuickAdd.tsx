@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { useStore } from '../lib/store';
 
 type Props = {
@@ -27,7 +28,7 @@ export function QuickAdd({ scheduleToday, placeholder }: Props) {
 
   return (
     <form className="quick-add" onSubmit={submit}>
-      <span className="quick-add-plus">+</span>
+      <span className="quick-add-plus"><Plus size={17} /></span>
       <input
         ref={inputRef}
         className="quick-add-input"

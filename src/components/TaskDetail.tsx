@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Check, Play, Sun, X } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { usePomodoro } from '../lib/pomodoro';
 import { MarkdownNotes } from './MarkdownNotes';
@@ -57,7 +58,7 @@ export function TaskDetail({ task }: Props) {
       <aside className="detail-drawer">
         <header className="detail-head">
           <button className="icon-btn" title="Fermer" onClick={() => selectTask(null)}>
-            ✕
+            <X size={16} />
           </button>
           <button
             className="detail-del"
@@ -74,7 +75,7 @@ export function TaskDetail({ task }: Props) {
               className={`task-check ${task.done ? 'checked' : ''}`}
               onClick={() => void patchTask({ id: task.id, done: !task.done })}
             >
-              {task.done && '✓'}
+              {task.done && <Check size={13} strokeWidth={3} />}
             </button>
             <textarea
               className="detail-title"
@@ -128,7 +129,7 @@ export function TaskDetail({ task }: Props) {
                 className={`field-toggle ${isToday ? 'on' : ''}`}
                 onClick={() => void scheduleForToday(task.id, !isToday)}
               >
-                {isToday ? "◎ Aujourd'hui" : "Planifier aujourd'hui"}
+                {isToday ? <><Sun size={14} /> Aujourd'hui</> : "Planifier aujourd'hui"}
               </button>
             </div>
 
@@ -141,7 +142,7 @@ export function TaskDetail({ task }: Props) {
                 onClick={() => startWork(task.id)}
                 title="Démarrer un pomodoro sur cette tâche"
               >
-                ▶ Focus 25 min
+                <Play size={13} /> Focus 25 min
               </button>
             </div>
           </div>
@@ -160,7 +161,7 @@ export function TaskDetail({ task }: Props) {
                         )
                       }
                     >
-                      ×
+                      <X size={13} />
                     </button>
                   </span>
                 ),
@@ -204,11 +205,11 @@ export function TaskDetail({ task }: Props) {
                     className={`task-check ${s.done ? 'checked' : ''}`}
                     onClick={() => void toggleDone(s.id, !s.done)}
                   >
-                    {s.done && '✓'}
+                    {s.done && <Check size={11} strokeWidth={3} />}
                   </button>
                   <span className="subtask-title">{s.title}</span>
                   <button className="subtask-del" title="Supprimer" onClick={() => void deleteTask(s.id)}>
-                    ✕
+                    <X size={13} />
                   </button>
                 </div>
               ))}

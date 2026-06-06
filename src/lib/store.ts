@@ -43,7 +43,10 @@ type Store = {
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
 
-  quickAdd: (raw: string, opts?: { scheduleToday?: boolean; date?: string | null }) => Promise<void>;
+  quickAdd: (
+    raw: string,
+    opts?: { scheduleToday?: boolean; date?: string | null; time?: string | null },
+  ) => Promise<void>;
   addSubtask: (parentId: string, title: string) => Promise<void>;
   toggleDone: (id: string, done: boolean) => Promise<void>;
   moveTask: (id: string, status: TaskStatus) => Promise<void>;
@@ -107,7 +110,14 @@ export const useStore = create<Store>((set, get) => ({
 
     const scheduledFor =
       opts?.date !== undefined ? opts.date : opts?.scheduleToday ? todayStr() : null;
-    const task = await api.createTask({ title: parsed.title, projectId, tagIds, scheduledFor });
+    const scheduledTime = opts?.time ?? null;
+    const task = await api.createTask({
+      title: parsed.title,
+      projectId,
+      tagIds,
+      scheduledFor,
+      scheduledTime,
+    });
     set({ tasks: [...get().tasks, task] });
   },
 

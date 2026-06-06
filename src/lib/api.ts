@@ -23,6 +23,7 @@ export type Task = {
   done: boolean;
   status: TaskStatus;
   scheduledFor: string | null;
+  scheduledTime: string | null;
   dueDate: string | null;
   estimateMinutes: number;
   spentMinutes: number;
@@ -55,6 +56,7 @@ export type NewTask = {
   projectId?: string | null;
   parentId?: string | null;
   scheduledFor?: string | null;
+  scheduledTime?: string | null;
   estimateMinutes?: number;
   tagIds?: string[];
 };
@@ -67,6 +69,7 @@ export type TaskPatch = {
   done?: boolean;
   status?: TaskStatus;
   scheduledFor?: string | null;
+  scheduledTime?: string | null;
   dueDate?: string | null;
   estimateMinutes?: number;
   spentMinutes?: number;

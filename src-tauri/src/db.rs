@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
   parent_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
   done INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'todo',
-  scheduled_for TEXT, due_date TEXT,
+  scheduled_for TEXT, scheduled_time TEXT, due_date TEXT,
   estimate_minutes INTEGER NOT NULL DEFAULT 0, spent_minutes INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
@@ -64,6 +64,10 @@ impl Db {
     fn from_conn(conn: Connection) -> SqlResult<Self> {
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         conn.execute_batch(BOOTSTRAP)?;
+        // Idempotent column adds for DBs created before a column existed.
+        // SQLite has no `ADD COLUMN IF NOT EXISTS`; the duplicate-column error
+        // on an already-migrated DB is expected and ignored.
+        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN scheduled_time TEXT", []);
         Ok(Db {
             conn: Arc::new(Mutex::new(conn)),
         })
@@ -81,8 +85,8 @@ impl Db {
         let id = new_id();
         conn.execute(
             "INSERT INTO tasks (id, title, notes, project_id, parent_id,
-                scheduled_for, estimate_minutes, sort_order, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), datetime('now'))",
+                scheduled_for, scheduled_time, estimate_minutes, sort_order, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'), datetime('now'))",
             params![
                 id,
                 input.title,
@@ -90,6 +94,7 @@ impl Db {
                 input.project_id,
                 input.parent_id,
                 input.scheduled_for,
+                input.scheduled_time,
                 input.estimate_minutes.unwrap_or(0),
                 0_i64,
             ],
@@ -137,6 +142,12 @@ impl Db {
         if let Some(v) = patch.scheduled_for {
             conn.execute(
                 "UPDATE tasks SET scheduled_for = ?1 WHERE id = ?2",
+                params![v, patch.id],
+            )?;
+        }
+        if let Some(v) = patch.scheduled_time {
+            conn.execute(
+                "UPDATE tasks SET scheduled_time = ?1 WHERE id = ?2",
                 params![v, patch.id],
             )?;
         }
@@ -231,7 +242,7 @@ impl Db {
     fn query_tasks(conn: &Connection, only_id: Option<&str>) -> SqlResult<Vec<TaskDto>> {
         let base = "SELECT id, title, notes, project_id, parent_id, done, status,
                 scheduled_for, due_date, estimate_minutes, spent_minutes, sort_order,
-                created_at, updated_at, completed_at
+                created_at, updated_at, completed_at, scheduled_time
              FROM tasks";
 
         let map_row = |row: &rusqlite::Row| -> SqlResult<(TaskDto, String)> {
@@ -246,6 +257,7 @@ impl Db {
                     done: row.get::<_, i64>(5)? != 0,
                     status: row.get(6)?,
                     scheduled_for: row.get(7)?,
+                    scheduled_time: row.get(15)?,
                     due_date: row.get(8)?,
                     estimate_minutes: row.get(9)?,
                     spent_minutes: row.get(10)?,
@@ -447,6 +459,7 @@ mod tests {
             project_id: Some(project.id.clone()),
             parent_id: None,
             scheduled_for: None,
+            scheduled_time: None,
             estimate_minutes: Some(30),
             tag_ids: None,
         };
@@ -469,6 +482,7 @@ mod tests {
             done: Some(true),
             status: None,
             scheduled_for: None,
+            scheduled_time: None,
             due_date: None,
             estimate_minutes: None,
             spent_minutes: None,
@@ -494,6 +508,7 @@ mod tests {
                 project_id: None,
                 parent_id: None,
                 scheduled_for: None,
+                scheduled_time: None,
                 estimate_minutes: None,
                 tag_ids: None,
             })

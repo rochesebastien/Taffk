@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CalendarCheck, CalendarDays, Columns3, ListTodo, Moon, Plus, Sun } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { useTheme } from '../lib/theme';
 import { PomodoroWidget } from './PomodoroWidget';
@@ -45,7 +46,7 @@ export function Sidebar() {
           className={`nav-item ${view === 'today' ? 'active' : ''}`}
           onClick={() => setView('today')}
         >
-          <span className="nav-icon">◎</span>
+          <span className="nav-icon"><CalendarCheck size={17} /></span>
           <span className="nav-label">Aujourd'hui</span>
           {todayCount > 0 && <span className="nav-count">{todayCount}</span>}
         </button>
@@ -53,7 +54,7 @@ export function Sidebar() {
           className={`nav-item ${view === 'all' ? 'active' : ''}`}
           onClick={() => setView('all')}
         >
-          <span className="nav-icon">≡</span>
+          <span className="nav-icon"><ListTodo size={17} /></span>
           <span className="nav-label">Toutes les tâches</span>
           {allCount > 0 && <span className="nav-count">{allCount}</span>}
         </button>
@@ -61,14 +62,14 @@ export function Sidebar() {
           className={`nav-item ${view === 'board' ? 'active' : ''}`}
           onClick={() => setView('board')}
         >
-          <span className="nav-icon">▦</span>
+          <span className="nav-icon"><Columns3 size={17} /></span>
           <span className="nav-label">Tableau</span>
         </button>
         <button
           className={`nav-item ${view === 'calendar' ? 'active' : ''}`}
           onClick={() => setView('calendar')}
         >
-          <span className="nav-icon">▤</span>
+          <span className="nav-icon"><CalendarDays size={17} /></span>
           <span className="nav-label">Planning</span>
         </button>
       </nav>
@@ -77,7 +78,7 @@ export function Sidebar() {
         <div className="sidebar-section-head">
           <span>Projets</span>
           <button className="icon-btn" title="Nouveau projet" onClick={() => setAdding(true)}>
-            +
+            <Plus size={15} />
           </button>
         </div>
         <div className="project-list">
@@ -113,7 +114,7 @@ export function Sidebar() {
       <div className="sidebar-foot">
         <PomodoroWidget />
         <button className="foot-btn" onClick={toggle} title="Changer de thème">
-          {theme === 'dark' ? '☾' : '☀'}
+          {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
           <span>{theme === 'dark' ? 'Sombre' : 'Clair'}</span>
         </button>
       </div>

@@ -11,6 +11,7 @@ pub struct TaskDto {
     pub done: bool,
     pub status: String,
     pub scheduled_for: Option<String>,
+    pub scheduled_time: Option<String>,
     pub due_date: Option<String>,
     pub estimate_minutes: i64,
     pub spent_minutes: i64,
@@ -54,6 +55,8 @@ pub struct NewTask {
     #[serde(default)]
     pub scheduled_for: Option<String>,
     #[serde(default)]
+    pub scheduled_time: Option<String>,
+    #[serde(default)]
     pub estimate_minutes: Option<i64>,
     #[serde(default)]
     pub tag_ids: Option<Vec<String>>,
@@ -79,6 +82,8 @@ pub struct TaskPatch {
     pub status: Option<String>,
     #[serde(default)]
     pub scheduled_for: Option<Option<String>>,
+    #[serde(default)]
+    pub scheduled_time: Option<Option<String>>,
     #[serde(default)]
     pub due_date: Option<Option<String>>,
     #[serde(default)]

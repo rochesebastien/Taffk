@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { SHORTCUTS } from '../lib/keyboard';
 
 type Props = { onClose: () => void };
@@ -9,7 +10,7 @@ export function KeyboardHelp({ onClose }: Props) {
         <div className="help-head">
           <span className="help-title">Raccourcis clavier</span>
           <button className="icon-btn" onClick={onClose}>
-            ✕
+            <X size={16} />
           </button>
         </div>
         <div className="help-list">
