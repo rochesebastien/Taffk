@@ -37,7 +37,7 @@ export function KanbanBoard() {
   return (
     <div className="flex h-full flex-col px-6">
       <header className="flex items-end justify-between gap-4 pb-4 pt-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight">Tableau</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">Tableau Kanban</h1>
         <span className="font-mono text-xs text-muted-foreground">
           {tasks.filter((t) => t.parentId === null && !t.done).length} en cours
         </span>
