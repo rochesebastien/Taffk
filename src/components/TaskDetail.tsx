@@ -1,18 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Play, Sun, Trash2, X } from 'lucide-react';
+import { CornerLeftUp, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
+import { fr } from 'date-fns/locale';
 import { useStore } from '../lib/store';
 import { usePomodoro } from '../lib/pomodoro';
-import { todayIso } from '../lib/dates';
+import { confirm } from '../lib/confirm';
+import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isoDate, todayIso } from '../lib/dates';
 import { cn } from '../lib/utils';
 import { MarkdownNotes } from './MarkdownNotes';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
-import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
+import { Calendar } from './ui/calendar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Task } from '../lib/api';
 
 type Props = { task: Task };
+
+function parseLocalDate(iso: string | null): Date | undefined {
+  if (!iso) return undefined;
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -22,6 +36,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60';
 
 export function TaskDetail({ task }: Props) {
   const projects = useStore((s) => s.projects);
@@ -33,13 +49,27 @@ export function TaskDetail({ task }: Props) {
   const setTaskTags = useStore((s) => s.setTaskTags);
   const addTag = useStore((s) => s.addTag);
   const deleteTask = useStore((s) => s.deleteTask);
+  const promoteSubtask = useStore((s) => s.promoteSubtask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
+  const applyTaskText = useStore((s) => s.applyTaskText);
   const startWork = usePomodoro((s) => s.startWork);
+  const pausePomodoro = usePomodoro((s) => s.pause);
+  const resumePomodoro = usePomodoro((s) => s.resume);
+  const phase = usePomodoro((s) => s.phase);
+  const running = usePomodoro((s) => s.running);
+  const focusTaskId = usePomodoro((s) => s.focusTaskId);
+
+  const isFocusTarget = focusTaskId === task.id && phase !== 'idle';
+  const locked = task.done;
 
   const [title, setTitle] = useState(task.title);
   const [tagDraft, setTagDraft] = useState('');
   const [subDraft, setSubDraft] = useState('');
+  const [planOpen, setPlanOpen] = useState(false);
+
+  const isSubtask = task.parentId !== null;
+  const parent = isSubtask ? tasks.find((t) => t.id === task.parentId) : undefined;
 
   const subtasks = tasks
     .filter((t) => t.parentId === task.id)
@@ -49,11 +79,26 @@ export function TaskDetail({ task }: Props) {
   useEffect(() => setTitle(task.title), [task.id, task.title]);
 
   const isToday = task.scheduledFor === todayIso();
-  const taskTags = task.tagIds.map((id) => tags.find((t) => t.id === id)).filter(Boolean);
+
+  const inheritedTagIds = isSubtask ? (parent?.tagIds ?? []) : [];
+  const inheritedTags = inheritedTagIds.map((id) => tags.find((t) => t.id === id)).filter(Boolean);
+  const ownTags = task.tagIds
+    .filter((id) => !inheritedTagIds.includes(id))
+    .map((id) => tags.find((t) => t.id === id))
+    .filter(Boolean);
+
+  const projectId = isSubtask ? (parent?.projectId ?? null) : task.projectId;
+  const project = projects.find((p) => p.id === projectId);
+
+  const estimate = task.estimateMinutes || 0;
+  const estimateOptions: number[] =
+    estimate > 0 && !(ESTIMATE_OPTIONS as readonly number[]).includes(estimate)
+      ? [estimate, ...ESTIMATE_OPTIONS]
+      : [...ESTIMATE_OPTIONS];
 
   function commitTitle() {
     const trimmed = title.trim();
-    if (trimmed && trimmed !== task.title) void patchTask({ id: task.id, title: trimmed });
+    if (trimmed && trimmed !== task.title) void applyTaskText(task.id, trimmed);
     else setTitle(task.title);
   }
 
@@ -65,30 +110,68 @@ export function TaskDetail({ task }: Props) {
     if (!task.tagIds.includes(tag.id)) await setTaskTags(task.id, [...task.tagIds, tag.id]);
   }
 
+  async function confirmDelete() {
+    const ok = await confirm({
+      title: 'Supprimer la tâche ?',
+      description: subtasks.length > 0 ? `« ${task.title} » et ses ${subtasks.length} sous-tâches seront supprimées.` : `« ${task.title} » sera supprimée.`,
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (ok) void deleteTask(task.id);
+  }
+
+  async function confirmDeleteSub(sub: Task) {
+    const ok = await confirm({
+      title: 'Supprimer la sous-tâche ?',
+      description: `« ${sub.title} » sera supprimée.`,
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (ok) void deleteTask(sub.id);
+  }
+
+  function planLabel() {
+    if (isToday) return "Aujourd'hui";
+    if (task.scheduledFor) {
+      return parseLocalDate(task.scheduledFor)!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return 'Planifier';
+  }
+
   return (
-    <Sheet open onOpenChange={(o) => !o && selectTask(null)}>
-      <SheetContent className="w-[440px] gap-0 p-0 sm:max-w-[440px]">
-        <SheetHeader className="flex-row items-center justify-between border-b p-3 pr-12">
-          <SheetTitle className="sr-only">Détail de la tâche</SheetTitle>
+    <aside className="flex w-[440px] shrink-0 flex-col overflow-hidden border-l border-border bg-background duration-200 animate-in slide-in-from-right-8">
+      <div className="flex flex-row items-center justify-between border-b p-3">
+        <h2 className="sr-only">Détail de la tâche</h2>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-destructive"
-            onClick={() => void deleteTask(task.id)}
+            className="size-7 p-0 text-muted-foreground hover:text-foreground"
+            title="Fermer"
+            onClick={() => selectTask(null)}
           >
-            <Trash2 size={14} /> Supprimer
+            <PanelRightClose size={16} />
           </Button>
-        </SheetHeader>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-7 p-0 text-muted-foreground hover:text-destructive"
+            title="Supprimer"
+            onClick={() => void confirmDelete()}
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
           <div className="flex items-start gap-3">
             <Checkbox
               checked={task.done}
-              onCheckedChange={(c) => void patchTask({ id: task.id, done: c === true })}
+              onCheckedChange={(c) => void toggleDone(task.id, c === true)}
               className="mt-1 size-[18px]"
             />
             <textarea
               value={title}
+              readOnly={locked}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => {
@@ -98,62 +181,140 @@ export function TaskDetail({ task }: Props) {
                 }
               }}
               rows={1}
-              className="flex-1 resize-none bg-transparent text-lg font-medium leading-snug outline-none [field-sizing:content]"
+              className={cn(
+                'flex-1 resize-none bg-transparent text-lg font-medium leading-snug outline-none [field-sizing:content]',
+                locked && 'text-muted-foreground line-through',
+              )}
             />
           </div>
 
           <div className="flex flex-col gap-3">
             <Field label="Projet">
-              <Select
-                value={task.projectId ?? 'none'}
-                onValueChange={(v) => void patchTask({ id: task.id, projectId: v === 'none' ? null : v })}
-              >
+              {isSubtask ? (
+                <span className="inline-flex items-center gap-2 text-sm text-foreground/80">
+                  {project ? (
+                    <>
+                      <span className="size-2 rounded-full" style={{ backgroundColor: project.color ?? 'var(--muted-foreground)' }} />
+                      {project.name}
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Aucun</span>
+                  )}
+                </span>
+              ) : (
+                <Select
+                  value={task.projectId ?? 'none'}
+                  disabled={locked}
+                  onValueChange={(v) => void patchTask({ id: task.id, projectId: v === 'none' ? null : v })}
+                >
+                  <SelectTrigger size="sm" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
+
+            <Field label="Estimation">
+              <Select value={String(estimate)} disabled={locked} onValueChange={(v) => void patchTask({ id: task.id, estimateMinutes: Number(v) })}>
                 <SelectTrigger size="sm" className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
+                  <SelectItem value="0">Aucune</SelectItem>
+                  {estimateOptions.map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {formatEstimate(m)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
 
-            <Field label="Estimation (min)">
-              <Input
-                type="number"
-                min={0}
-                step={5}
-                value={task.estimateMinutes || ''}
-                onChange={(e) => void patchTask({ id: task.id, estimateMinutes: Number(e.target.value) || 0 })}
-                className="h-8 w-40"
-              />
-            </Field>
-
             <Field label="Planification">
-              <Button
-                variant={isToday ? 'secondary' : 'outline'}
-                size="sm"
-                className={cn('gap-1.5', isToday && 'text-primary')}
-                onClick={() => void scheduleForToday(task.id, !isToday)}
-              >
-                {isToday && <Sun size={14} />}
-                {isToday ? "Aujourd'hui" : 'Planifier'}
-              </Button>
+              <DropdownMenu open={planOpen} onOpenChange={setPlanOpen}>
+                <DropdownMenuTrigger asChild disabled={locked}>
+                  <Button variant="outline" size="sm" className={cn('gap-1.5', isToday && 'text-primary')}>
+                    {isToday && <Sun size={14} />}
+                    {planLabel()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-auto p-2" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void scheduleForToday(task.id, true);
+                      setPlanOpen(false);
+                    }}
+                  >
+                    <Sun size={14} /> Aujourd'hui
+                  </DropdownMenuItem>
+                  {task.scheduledFor && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        void patchTask({ id: task.id, scheduledFor: null });
+                        setPlanOpen(false);
+                      }}
+                    >
+                      <X size={14} /> Retirer
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <Calendar
+                    mode="single"
+                    locale={fr}
+                    selected={parseLocalDate(task.scheduledFor)}
+                    onSelect={(d) => {
+                      if (d) {
+                        void patchTask({ id: task.id, scheduledFor: isoDate(d) });
+                        setPlanOpen(false);
+                      }
+                    }}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
             </Field>
 
             <Field label={`Temps passé${task.spentMinutes > 0 ? ` · ${task.spentMinutes} min` : ''}`}>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => startWork(task.id)}>
-                <Play size={13} /> Focus 25 min
-              </Button>
+              {isFocusTarget ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-1.5 text-primary"
+                  onClick={() => (running ? pausePomodoro() : resumePomodoro())}
+                >
+                  {running ? <Pause size={13} /> : <Play size={13} />}
+                  {running ? 'En focus…' : 'Reprendre'}
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" className="gap-1.5" disabled={locked} onClick={() => startWork(task.id)}>
+                  <Play size={13} /> Focus 25 min
+                </Button>
+              )}
             </Field>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {taskTags.map(
+            {inheritedTags.map(
+              (t) =>
+                t && (
+                  <span
+                    key={t.id}
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-border bg-muted/30 px-2 py-0.5 font-mono text-xs text-muted-foreground"
+                    style={{ color: t.color ?? undefined }}
+                    title="Tag hérité du parent"
+                  >
+                    #{t.name}
+                  </span>
+                ),
+            )}
+            {ownTags.map(
               (t) =>
                 t && (
                   <span
@@ -162,83 +323,106 @@ export function TaskDetail({ task }: Props) {
                     style={{ color: t.color ?? undefined }}
                   >
                     #{t.name}
-                    <button
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() => void setTaskTags(task.id, task.tagIds.filter((id) => id !== t.id))}
-                    >
-                      <X size={13} />
-                    </button>
+                    {!locked && (
+                      <button
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => void setTaskTags(task.id, task.tagIds.filter((id) => id !== t.id))}
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
                   </span>
                 ),
             )}
-            <input
-              value={tagDraft}
-              onChange={(e) => setTagDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void addTagFromDraft();
-                }
-              }}
-              onBlur={() => void addTagFromDraft()}
-              placeholder="+ tag"
-              className="w-20 rounded-md border border-dashed border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-solid focus:border-ring"
-            />
+            {!locked && (
+              <input
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void addTagFromDraft();
+                  }
+                }}
+                onBlur={() => void addTagFromDraft()}
+                placeholder="+ tag"
+                className="w-20 rounded-md border border-dashed border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-solid focus:border-ring"
+              />
+            )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Sous-tâches
-              </span>
+          {isSubtask ? (
+            <div className="flex flex-col gap-2">
+              <span className={SECTION_LABEL}>Tâche parent</span>
+              {parent && (
+                <button
+                  className="inline-flex items-center gap-1.5 self-start text-sm text-foreground/80 hover:underline"
+                  onClick={() => selectTask(parent.id)}
+                >
+                  <CornerLeftUp size={14} className="text-muted-foreground" />
+                  {parent.title}
+                </button>
+              )}
+              <Button variant="outline" size="sm" className="self-start" disabled={locked} onClick={() => void promoteSubtask(task.id)}>
+                Convertir en tâche
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className={SECTION_LABEL}>Sous-tâches</span>
+                {subtasks.length > 0 && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {subDone}/{subtasks.length}
+                  </span>
+                )}
+              </div>
               {subtasks.length > 0 && (
-                <span className="font-mono text-xs text-muted-foreground">
-                  {subDone}/{subtasks.length}
-                </span>
+                <div className="h-1 overflow-hidden rounded-full bg-accent">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-[width]"
+                    style={{ width: `${(subDone / subtasks.length) * 100}%` }}
+                  />
+                </div>
+              )}
+              <div className="flex flex-col">
+                {subtasks.map((s) => (
+                  <div key={s.id} className="group/sub flex items-center gap-2.5 rounded-md px-1 py-1.5 hover:bg-accent/50">
+                    <Checkbox checked={s.done} onCheckedChange={(c) => void toggleDone(s.id, c === true)} className="size-4" />
+                    <span className={cn('min-w-0 flex-1 truncate text-sm', s.done ? 'text-muted-foreground line-through' : 'text-foreground/80')}>
+                      {s.title}
+                    </span>
+                    <button
+                      className="text-muted-foreground/40 opacity-0 transition hover:text-destructive group-hover/sub:opacity-100"
+                      onClick={() => void confirmDeleteSub(s)}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {!locked && (
+                <input
+                  value={subDraft}
+                  onChange={(e) => setSubDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void addSubtask(task.id, subDraft);
+                      setSubDraft('');
+                    }
+                  }}
+                  placeholder="+ sous-tâche"
+                  className="rounded-md border border-dashed border-border bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-solid focus:border-ring"
+                />
               )}
             </div>
-            {subtasks.length > 0 && (
-              <div className="h-1 overflow-hidden rounded-full bg-accent">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-[width]"
-                  style={{ width: `${(subDone / subtasks.length) * 100}%` }}
-                />
-              </div>
-            )}
-            <div className="flex flex-col">
-              {subtasks.map((s) => (
-                <div key={s.id} className="group/sub flex items-center gap-2.5 rounded-md px-1 py-1.5 hover:bg-accent/50">
-                  <Checkbox checked={s.done} onCheckedChange={(c) => void toggleDone(s.id, c === true)} className="size-4" />
-                  <span className={cn('min-w-0 flex-1 truncate text-sm', s.done ? 'text-muted-foreground line-through' : 'text-foreground/80')}>
-                    {s.title}
-                  </span>
-                  <button
-                    className="text-muted-foreground/40 opacity-0 transition hover:text-destructive group-hover/sub:opacity-100"
-                    onClick={() => void deleteTask(s.id)}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <input
-              value={subDraft}
-              onChange={(e) => setSubDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void addSubtask(task.id, subDraft);
-                  setSubDraft('');
-                }
-              }}
-              placeholder="+ sous-tâche"
-              className="rounded-md border border-dashed border-border bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-solid focus:border-ring"
-            />
-          </div>
+          )}
 
           <MarkdownNotes key={task.id} initial={task.notes} onSave={(notes) => void patchTask({ id: task.id, notes })} />
+
+          <p className="mt-auto pt-2 text-xs text-muted-foreground/60">Créé le {formatCreatedAt(task.createdAt)}</p>
         </div>
-      </SheetContent>
-    </Sheet>
+      </aside>
   );
 }
