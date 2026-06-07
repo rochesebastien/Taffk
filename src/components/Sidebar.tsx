@@ -19,7 +19,6 @@ import {
   Plus,
   Settings,
   Sun,
-  Tally1,
   type LucideIcon,
 } from 'lucide-react';
 import { useStore, type View } from '../lib/store';
@@ -220,14 +219,20 @@ export function Sidebar() {
               const count = top.filter((t) => !t.done && t.projectId === p.id).length;
               const active = view === 'project' && activeProjectId === p.id;
               return (
-                <NavItem
+                <button
                   key={p.id}
-                  icon={Tally1}
-                  label={p.name}
-                  count={count}
-                  active={active}
                   onClick={() => openProject(p.id)}
-                />
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-md py-1.5 pl-6 pr-2.5 text-left text-sm transition-colors',
+                    active
+                      ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                  )}
+                >
+                  <span className="shrink-0 text-muted-foreground">-</span>
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  {count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
+                </button>
               );
             })}
           </div>
