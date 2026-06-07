@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus } from './api';
+import { isoDate } from './dates';
 
-export type View = 'today' | 'all' | 'project' | 'board' | 'calendar';
+export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'settings';
 
 export type QuickAddParsed = {
   title: string;
@@ -27,7 +28,7 @@ export function parseQuickAdd(raw: string): QuickAddParsed {
   return { title: titleWords.join(' ').trim(), tagNames, projectName };
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const todayStr = () => isoDate(new Date());
 
 type Store = {
   tasks: Task[];
@@ -47,7 +48,14 @@ type Store = {
     raw: string,
     opts?: { scheduleToday?: boolean; date?: string | null; time?: string | null },
   ) => Promise<void>;
-  addSubtask: (parentId: string, title: string) => Promise<void>;
+  addSubtask: (parentId: string, rawTitle: string) => Promise<void>;
+  promoteSubtask: (id: string) => Promise<void>;
+  duplicateTask: (id: string) => Promise<void>;
+  moveTaskToTop: (id: string) => Promise<void>;
+  /** Re-apply `#tag` / `@projet` syntax from an edited title (used by inline editing). */
+  applyTaskText: (id: string, raw: string) => Promise<void>;
+  ensureTags: (names: string[]) => Promise<string[]>;
+  resolveProjectByHandle: (handle: string) => Promise<string | null>;
   toggleDone: (id: string, done: boolean) => Promise<void>;
   moveTask: (id: string, status: TaskStatus) => Promise<void>;
   patchTask: (patch: TaskPatch) => Promise<void>;
@@ -55,7 +63,7 @@ type Store = {
   setTaskTags: (taskId: string, tagIds: string[]) => Promise<void>;
   scheduleForToday: (id: string, on: boolean) => Promise<void>;
 
-  addProject: (name: string, color?: string | null) => Promise<Project>;
+  addProject: (name: string, color?: string | null, alias?: string | null) => Promise<Project>;
   removeProject: (id: string) => Promise<void>;
   addTag: (name: string, color?: string | null) => Promise<Tag>;
 };
@@ -92,18 +100,11 @@ export const useStore = create<Store>((set, get) => ({
     const parsed = parseQuickAdd(raw);
     if (!parsed.title) return;
 
-    const tagIds: string[] = [];
-    for (const name of parsed.tagNames) {
-      const tagId = await get().addTag(name).then((t) => t.id);
-      if (!tagIds.includes(tagId)) tagIds.push(tagId);
-    }
+    const tagIds = await get().ensureTags(parsed.tagNames);
 
     let projectId: string | null = null;
     if (parsed.projectName) {
-      const existing = get().projects.find(
-        (p) => p.name.toLowerCase() === parsed.projectName!.toLowerCase(),
-      );
-      projectId = existing ? existing.id : (await get().addProject(parsed.projectName)).id;
+      projectId = await get().resolveProjectByHandle(parsed.projectName);
     } else if (get().view === 'project') {
       projectId = get().activeProjectId;
     }
@@ -121,21 +122,127 @@ export const useStore = create<Store>((set, get) => ({
     set({ tasks: [...get().tasks, task] });
   },
 
-  async addSubtask(parentId, title) {
-    const trimmed = title.trim();
-    if (!trimmed) return;
+  async addSubtask(parentId, rawTitle) {
+    const parsed = parseQuickAdd(rawTitle);
+    const title = parsed.title.trim();
+    if (!title) return;
     const parent = get().tasks.find((t) => t.id === parentId);
+    const tagIds = await get().ensureTags(parsed.tagNames);
     const task = await api.createTask({
-      title: trimmed,
+      title,
       parentId,
       projectId: parent?.projectId ?? null,
+      tagIds,
     });
     set({ tasks: [...get().tasks, task] });
   },
 
+  async applyTaskText(id, raw) {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) return;
+    const parsed = parseQuickAdd(raw);
+    const patch: TaskPatch = { id, title: parsed.title || task.title };
+    if (task.parentId === null && parsed.projectName) {
+      patch.projectId = await get().resolveProjectByHandle(parsed.projectName);
+    }
+    await get().patchTask(patch);
+    if (parsed.tagNames.length) {
+      const newIds = await get().ensureTags(parsed.tagNames);
+      const merged = [...new Set([...task.tagIds, ...newIds])];
+      if (merged.length !== task.tagIds.length) await get().setTaskTags(id, merged);
+    }
+  },
+
+  async ensureTags(names) {
+    const ids: string[] = [];
+    for (const name of names) {
+      const tag = await get().addTag(name);
+      if (!ids.includes(tag.id)) ids.push(tag.id);
+    }
+    return ids;
+  },
+
+  async resolveProjectByHandle(handle) {
+    const h = handle.toLowerCase();
+    const existing = get().projects.find(
+      (p) => p.alias?.toLowerCase() === h || p.name.toLowerCase() === h,
+    );
+    if (existing) return existing.id;
+    return (await get().addProject(handle, null, h)).id;
+  },
+
+  async promoteSubtask(id) {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task || task.parentId === null) return;
+    const parent = get().tasks.find((t) => t.id === task.parentId);
+    // Freeze the inherited project + tags onto the task so they persist once detached.
+    if (parent && parent.tagIds.length) await get().setTaskTags(id, parent.tagIds);
+    await get().patchTask({ id, parentId: null, projectId: parent?.projectId ?? task.projectId });
+  },
+
+  async duplicateTask(id) {
+    const src = get().tasks.find((t) => t.id === id);
+    if (!src) return;
+    const copy = await api.createTask({
+      title: `${src.title} (copie)`,
+      notes: src.notes,
+      projectId: src.projectId,
+      parentId: src.parentId,
+      scheduledFor: src.scheduledFor,
+      scheduledTime: src.scheduledTime,
+      estimateMinutes: src.estimateMinutes,
+      tagIds: src.tagIds,
+    });
+    set({ tasks: [...get().tasks, copy] });
+    const subs = get().tasks.filter((t) => t.parentId === id);
+    for (const sub of subs) {
+      const subCopy = await api.createTask({
+        title: sub.title,
+        notes: sub.notes,
+        projectId: sub.projectId,
+        parentId: copy.id,
+        scheduledFor: sub.scheduledFor,
+        scheduledTime: sub.scheduledTime,
+        estimateMinutes: sub.estimateMinutes,
+        tagIds: sub.tagIds,
+      });
+      set({ tasks: [...get().tasks, subCopy] });
+    }
+  },
+
+  async moveTaskToTop(id) {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) return;
+    const siblings = get().tasks.filter((t) => t.parentId === task.parentId);
+    const minSort = Math.min(...siblings.map((t) => t.sortOrder));
+    await get().patchTask({ id, sortOrder: minSort - 1 });
+  },
+
   async toggleDone(id, done) {
-    const task = await api.updateTask({ id, done, status: done ? 'done' : 'todo' });
-    set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) return;
+    const status: TaskStatus = done ? 'done' : 'todo';
+    const updated = [await api.updateTask({ id, done, status })];
+
+    // Completing/uncompleting a parent cascades to its subtasks.
+    for (const child of get().tasks.filter((t) => t.parentId === id)) {
+      if (child.done !== done) updated.push(await api.updateTask({ id: child.id, done, status }));
+    }
+
+    // Toggling a subtask: the parent is done iff every sibling is done.
+    if (task.parentId) {
+      const siblings = get().tasks.filter((t) => t.parentId === task.parentId);
+      const allDone = siblings.every((s) => (s.id === id ? done : s.done));
+      const parent = get().tasks.find((t) => t.id === task.parentId);
+      if (parent && parent.done !== allDone) {
+        updated.push(
+          await api.updateTask({ id: parent.id, done: allDone, status: allDone ? 'done' : 'todo' }),
+        );
+      }
+    }
+
+    const byId = new Map(updated.map((t) => [t.id, t]));
+    set({ tasks: get().tasks.map((t) => byId.get(t.id) ?? t) });
   },
 
   async moveTask(id, status) {
@@ -166,8 +273,8 @@ export const useStore = create<Store>((set, get) => ({
     await get().patchTask({ id, scheduledFor: on ? todayStr() : null });
   },
 
-  async addProject(name, color = null) {
-    const project = await api.createProject(name, color);
+  async addProject(name, color = null, alias = null) {
+    const project = await api.createProject(name, color, alias);
     set({ projects: [...get().projects, project] });
     return project;
   },
