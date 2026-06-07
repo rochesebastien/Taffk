@@ -38,6 +38,8 @@ export type Project = {
   id: string;
   name: string;
   color: string | null;
+  alias: string | null;
+  pinned: boolean;
   sortOrder: number;
   archived: boolean;
   createdAt: string;
@@ -66,6 +68,7 @@ export type TaskPatch = {
   title?: string;
   notes?: string;
   projectId?: string | null;
+  parentId?: string | null;
   done?: boolean;
   status?: TaskStatus;
   scheduledFor?: string | null;
@@ -85,8 +88,9 @@ export interface Backend {
   reorderTasks(ids: string[]): Promise<void>;
 
   listProjects(): Promise<Project[]>;
-  createProject(name: string, color: string | null): Promise<Project>;
-  updateProject(id: string, name: string, color: string | null): Promise<Project>;
+  createProject(name: string, color: string | null, alias: string | null): Promise<Project>;
+  updateProject(id: string, name: string, color: string | null, alias: string | null): Promise<Project>;
+  setProjectPinned(id: string, pinned: boolean): Promise<Project>;
   deleteProject(id: string): Promise<void>;
 
   listTags(): Promise<Tag[]>;
@@ -109,8 +113,9 @@ const tauriBackend: Backend = {
   reorderTasks: (ids) => invoke('reorder_tasks', { ids }),
 
   listProjects: () => invoke('list_projects'),
-  createProject: (name, color) => invoke('create_project', { name, color }),
-  updateProject: (id, name, color) => invoke('update_project', { id, name, color }),
+  createProject: (name, color, alias) => invoke('create_project', { name, color, alias }),
+  updateProject: (id, name, color, alias) => invoke('update_project', { id, name, color, alias }),
+  setProjectPinned: (id, pinned) => invoke('set_project_pinned', { id, pinned }),
   deleteProject: (id) => invoke('delete_project', { id }),
 
   listTags: () => invoke('list_tags'),

@@ -1,4 +1,16 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize a nullable, optional column so we can tell apart the three cases:
+/// key absent (`None` — leave column), key present `null` (`Some(None)` — clear),
+/// key present value (`Some(Some(v))` — set). Plain `Option<Option<T>>` collapses
+/// `null` to `None`, which would make clearing a column impossible over IPC.
+fn double_option<'de, T, D>(de: D) -> Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Deserialize::deserialize(de).map(Some)
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +40,8 @@ pub struct ProjectDto {
     pub id: String,
     pub name: String,
     pub color: Option<String>,
+    pub alias: Option<String>,
+    pub pinned: bool,
     pub sort_order: i64,
     pub archived: bool,
     pub created_at: String,
@@ -74,17 +88,19 @@ pub struct TaskPatch {
     pub title: Option<String>,
     #[serde(default)]
     pub notes: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "double_option")]
     pub project_id: Option<Option<String>>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub parent_id: Option<Option<String>>,
     #[serde(default)]
     pub done: Option<bool>,
     #[serde(default)]
     pub status: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "double_option")]
     pub scheduled_for: Option<Option<String>>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "double_option")]
     pub scheduled_time: Option<Option<String>>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "double_option")]
     pub due_date: Option<Option<String>>,
     #[serde(default)]
     pub estimate_minutes: Option<i64>,

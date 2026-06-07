@@ -7,9 +7,11 @@ import { format, getDay, parse, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { prompt } from '../lib/prompt';
 import { isoDate, minutesToTime, timeToMinutes } from '../lib/dates';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
+import { ButtonGroup } from './ui/button-group';
 import type { Task } from '../lib/api';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -77,7 +79,7 @@ export function CalendarView() {
 
   async function onSelectSlot({ start, action }: { start: Date; action: string }) {
     if (action !== 'select' && action !== 'click') return;
-    const title = window.prompt('Nouvelle tâche');
+    const title = await prompt({ title: 'Nouvelle tâche', placeholder: 'Titre  (#tag  @projet)', confirmLabel: 'Ajouter' });
     if (!title?.trim()) return;
     await quickAdd(title, {
       date: isoDate(start),
@@ -94,30 +96,30 @@ export function CalendarView() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Planning</h1>
           <span className="text-sm capitalize text-muted-foreground/70">{label}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="flex rounded-md border border-border p-0.5">
+        <div className="flex items-center gap-2">
+          <ButtonGroup>
             {(['week', 'day'] as RbcView[]).map((v) => (
-              <button
+              <Button
                 key={v}
+                size="sm"
+                variant={view === v ? 'secondary' : 'outline'}
                 onClick={() => setView(v)}
-                className={cn(
-                  'rounded px-2.5 py-1 text-xs transition-colors',
-                  view === v ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )}
               >
                 {v === 'week' ? 'Semaine' : 'Jour'}
-              </button>
+              </Button>
             ))}
-          </div>
-          <Button variant="outline" size="icon" className="size-8" onClick={() => setDate(localizer.add(date, -1, view === 'day' ? 'day' : 'week'))}>
-            <ChevronLeft size={16} />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setDate(new Date())}>
-            Aujourd'hui
-          </Button>
-          <Button variant="outline" size="icon" className="size-8" onClick={() => setDate(localizer.add(date, 1, view === 'day' ? 'day' : 'week'))}>
-            <ChevronRight size={16} />
-          </Button>
+          </ButtonGroup>
+          <ButtonGroup>
+            <Button variant="outline" size="icon" onClick={() => setDate(localizer.add(date, -1, view === 'day' ? 'day' : 'week'))}>
+              <ChevronLeft size={16} />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setDate(new Date())}>
+              Aujourd'hui
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => setDate(localizer.add(date, 1, view === 'day' ? 'day' : 'week'))}>
+              <ChevronRight size={16} />
+            </Button>
+          </ButtonGroup>
         </div>
       </header>
 

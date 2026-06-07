@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { isTypingTarget } from '../lib/keyboard';
 import { todayIso } from '../lib/dates';
+import { cn } from '../lib/utils';
 import { QuickAdd } from './QuickAdd';
 import { TaskItem } from './TaskItem';
 import type { Task } from '../lib/api';
@@ -43,6 +44,8 @@ export function TaskListView() {
   const done = visible.filter((t) => t.done);
 
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overDone, setOverDone] = useState(false);
 
   useEffect(() => {
     if (focusedId && !visible.some((t) => t.id === focusedId)) setFocusedId(null);
@@ -74,19 +77,15 @@ export function TaskListView() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="mx-auto flex w-full max-w-3xl items-end justify-between gap-4 px-6 pb-4 pt-8">
+      <header className="flex w-full items-end justify-between gap-4 px-6 pb-4 pt-8">
         <div className="flex items-baseline gap-3">
           <h1 className="font-display text-3xl font-bold tracking-tight">{title}</h1>
           {subtitle && <span className="text-sm capitalize text-muted-foreground/70">{subtitle}</span>}
         </div>
-        <div className="whitespace-nowrap font-mono text-xs text-muted-foreground">
-          {open.length} en cours
-          {done.length > 0 && <span className="text-muted-foreground/50"> · {done.length} faites</span>}
-        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl px-6 pb-10">
+        <div className="w-full px-6 pb-10">
           <QuickAdd scheduleToday={view === 'today'} />
 
           {open.length === 0 && done.length === 0 ? (
@@ -95,21 +94,57 @@ export function TaskListView() {
               <p className="mt-1 text-sm text-muted-foreground/60">Ajoute une tâche ci-dessus — appuie sur Entrée.</p>
             </div>
           ) : (
-            <div className="mt-4 flex flex-col gap-2">
-              {open.map((task) => (
-                <TaskItem key={task.id} task={task} projects={projects} tags={tags} focused={task.id === focusedId} />
-              ))}
-            </div>
-          )}
-
-          {done.length > 0 && (
-            <div className="mt-2 flex flex-col gap-2">
-              <div className="px-1 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Terminées
+            <div className="mx-auto mt-4 flex w-fit min-w-[60%] max-w-full flex-col gap-2">
+              <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {open.length} en cours
               </div>
-              {done.map((task) => (
-                <TaskItem key={task.id} task={task} projects={projects} tags={tags} focused={task.id === focusedId} />
+              {open.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  projects={projects}
+                  tags={tags}
+                  focused={task.id === focusedId}
+                  draggable
+                  onDragStart={() => setDragId(task.id)}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setOverDone(false);
+                  }}
+                />
               ))}
+              {(done.length > 0 || dragId) && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setOverDone(true);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverDone(false);
+                  }}
+                  onDrop={() => {
+                    if (dragId) void toggleDone(dragId, true);
+                    setDragId(null);
+                    setOverDone(false);
+                  }}
+                  className={cn(
+                    'mt-3 flex flex-col gap-2 rounded-xl transition-colors',
+                    overDone && 'bg-accent/40 ring-2 ring-ring ring-offset-2 ring-offset-background',
+                  )}
+                >
+                  <div className="px-1 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    Terminées
+                  </div>
+                  {done.map((task) => (
+                    <TaskItem key={task.id} task={task} projects={projects} tags={tags} focused={task.id === focusedId} />
+                  ))}
+                  {done.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-muted-foreground/60">
+                      Déposer ici pour terminer
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

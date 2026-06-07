@@ -58,3 +58,25 @@ export function currentMinutes(): number {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
 }
+
+/** Preset durations offered for a task estimate (in minutes). */
+export const ESTIMATE_OPTIONS = [5, 10, 15, 30, 60, 120, 180, 240, 480] as const;
+
+/** A stored timestamp (`YYYY-MM-DD HH:MM:SS` UTC, or ISO) → `JJ/MM/AAAA à HH:MM` local. */
+export function formatCreatedAt(stored: string): string {
+  const norm = stored.includes('T') ? stored : `${stored.replace(' ', 'T')}Z`;
+  const d = new Date(norm);
+  if (Number.isNaN(d.getTime())) return '';
+  const date = d.toLocaleDateString('fr-FR');
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return `${date} à ${time}`;
+}
+
+/** Minutes → compact human label: `0`→`''`, `45`→`45m`, `60`→`1h`, `90`→`1h30`. */
+export function formatEstimate(minutes: number): string {
+  if (!minutes || minutes <= 0) return '';
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
+}
