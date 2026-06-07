@@ -37,16 +37,26 @@ type Store = {
   view: View;
   activeProjectId: string | null;
   selectedTaskId: string | null;
+  spotlightOpen: boolean;
   loaded: boolean;
 
   load: () => Promise<void>;
   setView: (view: View) => void;
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
+  openSpotlight: () => void;
+  closeSpotlight: () => void;
 
   quickAdd: (
     raw: string,
-    opts?: { scheduleToday?: boolean; date?: string | null; time?: string | null },
+    opts?: {
+      scheduleToday?: boolean;
+      date?: string | null;
+      time?: string | null;
+      projectId?: string | null;
+      tagIds?: string[];
+      estimateMinutes?: number;
+    },
   ) => Promise<void>;
   addSubtask: (parentId: string, rawTitle: string) => Promise<void>;
   promoteSubtask: (id: string) => Promise<void>;
@@ -77,6 +87,7 @@ export const useStore = create<Store>((set, get) => ({
   view: 'today',
   activeProjectId: null,
   selectedTaskId: null,
+  spotlightOpen: false,
   loaded: false,
 
   async load() {
@@ -97,18 +108,29 @@ export const useStore = create<Store>((set, get) => ({
   selectTask(id) {
     set({ selectedTaskId: id });
   },
+  openSpotlight() {
+    set({ spotlightOpen: true });
+  },
+  closeSpotlight() {
+    set({ spotlightOpen: false });
+  },
 
   async quickAdd(raw, opts) {
     const parsed = parseQuickAdd(raw);
     if (!parsed.title) return;
 
-    const tagIds = await get().ensureTags(parsed.tagNames);
+    const parsedTagIds = await get().ensureTags(parsed.tagNames);
+    const tagIds = [...new Set([...(opts?.tagIds ?? []), ...parsedTagIds])];
 
-    let projectId: string | null = null;
-    if (parsed.projectName) {
+    let projectId: string | null;
+    if (opts?.projectId !== undefined) {
+      projectId = opts.projectId;
+    } else if (parsed.projectName) {
       projectId = await get().resolveProjectByHandle(parsed.projectName);
     } else if (get().view === 'project') {
       projectId = get().activeProjectId;
+    } else {
+      projectId = null;
     }
 
     const scheduledFor =
@@ -120,6 +142,7 @@ export const useStore = create<Store>((set, get) => ({
       tagIds,
       scheduledFor,
       scheduledTime,
+      estimateMinutes: opts?.estimateMinutes,
     });
     set({ tasks: [...get().tasks, task] });
   },

@@ -5,6 +5,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CalendarView } from './components/CalendarView';
 import { SettingsView } from './components/SettingsView';
 import { TaskDetail } from './components/TaskDetail';
+import { TaskSpotlight } from './components/TaskSpotlight';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { PromptDialog } from './components/PromptDialog';
 import { KeyboardHelp } from './components/KeyboardHelp';
@@ -22,6 +23,8 @@ export default function App() {
   const selectedTaskId = useStore((s) => s.selectedTaskId);
   const selectTask = useStore((s) => s.selectTask);
   const selectedTask = useStore((s) => s.tasks.find((t) => t.id === s.selectedTaskId) ?? null);
+  const spotlightOpen = useStore((s) => s.spotlightOpen);
+  const openSpotlight = useStore((s) => s.openSpotlight);
 
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -36,6 +39,11 @@ export default function App() {
         else if (selectedTaskId) selectTask(null);
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
+        e.preventDefault();
+        openSpotlight();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
 
       if (e.key === '?') {
@@ -44,12 +52,12 @@ export default function App() {
         setView(VIEW_KEYS[e.key]);
       } else if (e.key === 'a' || e.key === 'n') {
         e.preventDefault();
-        window.dispatchEvent(new Event('taffk:focus-quickadd'));
+        openSpotlight();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [helpOpen, selectedTaskId, selectTask, setView]);
+  }, [helpOpen, selectedTaskId, selectTask, setView, openSpotlight]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -69,6 +77,7 @@ export default function App() {
           )}
         </main>
         {selectedTask && <TaskDetail task={selectedTask} />}
+        {spotlightOpen && <TaskSpotlight />}
         {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
         <ConfirmDialog />
         <PromptDialog />

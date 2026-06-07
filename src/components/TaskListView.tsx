@@ -86,7 +86,7 @@ export function TaskListView() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="w-full px-6 pb-10">
-          <QuickAdd scheduleToday={view === 'today'} />
+          <QuickAdd />
 
           {open.length === 0 && done.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground">
@@ -94,7 +94,7 @@ export function TaskListView() {
               <p className="mt-1 text-sm text-muted-foreground/60">Ajoute une tâche ci-dessus — appuie sur Entrée.</p>
             </div>
           ) : (
-            <div className="mx-auto mt-4 flex w-fit min-w-[60%] max-w-full flex-col gap-2">
+            <div className="mx-auto mt-4 flex w-fit min-w-[72%] max-w-full flex-col gap-2">
               <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                 {open.length} en cours
               </div>
