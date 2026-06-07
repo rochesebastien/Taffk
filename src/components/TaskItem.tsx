@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileText, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
+import { FileText, FolderOutput, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { usePomodoro } from '../lib/pomodoro';
 import { formatEstimate, todayIso } from '../lib/dates';
@@ -28,6 +28,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
   const toggleDone = useStore((s) => s.toggleDone);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
+  const openProject = useStore((s) => s.openProject);
   const applyTaskText = useStore((s) => s.applyTaskText);
   const tasks = useStore((s) => s.tasks);
   const isOpen = useStore((s) => s.selectedTaskId === task.id);
@@ -124,20 +125,29 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
                 #{t.name}
               </Badge>
             ))}
-            <div className="ml-auto flex shrink-0 items-center gap-2.5 text-[13px] text-muted-foreground">
-              {effectiveProject && (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="size-2 rounded-full" style={{ background: effectiveProject.color ?? 'var(--muted-foreground)' }} />
-                  {effectiveProject.name}
-                </span>
-              )}
-              {task.estimateMinutes > 0 && (
-                <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground/70">
-                  <Timer size={13} /> {formatEstimate(task.estimateMinutes)}
-                </span>
-              )}
-              {task.notes.trim() && <FileText size={14} className="text-muted-foreground/50" />}
-            </div>
+            {effectiveProject && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openProject(effectiveProject.id);
+                    }}
+                    className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <FolderOutput size={13} style={effectiveProject.color ? { color: effectiveProject.color } : undefined} />
+                    {effectiveProject.name}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Ouvrir le projet</TooltipContent>
+              </Tooltip>
+            )}
+            {task.estimateMinutes > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground/70">
+                <Timer size={13} /> {formatEstimate(task.estimateMinutes)}
+              </span>
+            )}
+            {task.notes.trim() && <FileText size={14} className="ml-auto shrink-0 text-muted-foreground/50" />}
           </>
         )}
       </div>
@@ -154,17 +164,28 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
               <TooltipContent>Démarrer un focus</TooltipContent>
             </Tooltip>
           )}
-          {!task.done && (
+          {!task.done && !isToday && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className={cn(actionBtn, isToday && 'text-primary')} onClick={() => void scheduleForToday(task.id, !isToday)}>
+                <button className={actionBtn} onClick={() => void scheduleForToday(task.id, true)}>
                   <Sun size={15} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{isToday ? "Retirer d'aujourd'hui" : "Planifier aujourd'hui"}</TooltipContent>
+              <TooltipContent>Planifier aujourd'hui</TooltipContent>
             </Tooltip>
           )}
         </div>
+
+        {!task.done && isToday && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className={cn(actionBtn, 'text-primary')} onClick={() => void scheduleForToday(task.id, false)}>
+                <Sun size={15} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Retirer d'aujourd'hui</TooltipContent>
+          </Tooltip>
+        )}
 
         {isFocusTarget && (
           <Tooltip>

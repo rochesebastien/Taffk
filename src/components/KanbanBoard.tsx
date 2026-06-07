@@ -44,7 +44,7 @@ export function KanbanBoard() {
       </header>
 
       <div className="pb-3">
-        <QuickAdd scheduleToday={false} placeholder="Ajouter une tâche au tableau…  (#tag  @projet)" />
+        <QuickAdd />
       </div>
 
       <div className="flex min-h-0 flex-1 gap-3 pb-6">

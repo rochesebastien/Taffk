@@ -34,6 +34,7 @@ import { todayIso } from '../lib/dates';
 import { cn } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
 import { ProjectDialog } from './ProjectDialog';
+import { Kbd } from './ui/kbd';
 import type { Project } from '../lib/api';
 import {
   DropdownMenu,
@@ -105,6 +106,7 @@ export function Sidebar() {
   const tasks = useStore((s) => s.tasks);
   const setView = useStore((s) => s.setView);
   const openProject = useStore((s) => s.openProject);
+  const openSpotlight = useStore((s) => s.openSpotlight);
   const toggleProjectPin = useStore((s) => s.toggleProjectPin);
   const updateProject = useStore((s) => s.updateProject);
   const removeProject = useStore((s) => s.removeProject);
@@ -174,6 +176,15 @@ export function Sidebar() {
       <div className="px-2 pb-4">
         <img className="h-8 w-auto" src={theme === 'light' ? logoDark : logoLight} alt="Taffk" />
       </div>
+
+      <button
+        onClick={openSpotlight}
+        className="group mb-1.5 flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+      >
+        <SquarePen size={17} className="shrink-0 text-primary" />
+        <span className="min-w-0 flex-1 truncate">Nouvelle tâche</span>
+        <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">Ctrl+Space</Kbd>
+      </button>
 
       <nav className="flex flex-col gap-0.5">
         {nav.map((n) => (
