@@ -5,37 +5,52 @@ import { Input } from './ui/input';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import type { Project } from '../lib/api';
 
 const toHandle = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
-export function ProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function ProjectDialog({
+  open,
+  onOpenChange,
+  project,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  project?: Project | null;
+}) {
   const addProject = useStore((s) => s.addProject);
+  const updateProject = useStore((s) => s.updateProject);
   const openProject = useStore((s) => s.openProject);
 
+  const editing = Boolean(project);
   const [name, setName] = useState('');
   const [alias, setAlias] = useState('');
   const [aliasEdited, setAliasEdited] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setName('');
-      setAlias('');
-      setAliasEdited(false);
+      setName(project?.name ?? '');
+      setAlias(project?.alias ?? '');
+      setAliasEdited(Boolean(project?.alias));
     }
-  }, [open]);
+  }, [open, project]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    const handle = (aliasEdited ? alias : alias || toHandle(trimmed)).trim() || null;
-    const p = await addProject(trimmed, null, handle ? toHandle(handle) : null);
-    openProject(p.id);
+    const raw = (aliasEdited ? alias : alias || toHandle(trimmed)).trim();
+    const handle = raw ? toHandle(raw) : null;
+    if (project) {
+      await updateProject(project.id, trimmed, project.color, handle);
+    } else {
+      const p = await addProject(trimmed, null, handle);
+      openProject(p.id);
+    }
     onOpenChange(false);
   }
 
@@ -44,8 +59,8 @@ export function ProjectDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       <DialogContent className="sm:max-w-sm">
         <form onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>Nouveau projet</DialogTitle>
-            <DialogDescription>Le tag de liaison sert à rattacher une tâche au projet via « @ ».</DialogDescription>
+            <DialogTitle>{editing ? 'Modifier le projet' : 'Nouveau projet'}</DialogTitle>
+            {/* <DialogDescription>Le tag de liaison sert à rattacher une tâche au projet via « @ ».</DialogDescription> */}
           </DialogHeader>
           <div className="my-4 flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
@@ -57,11 +72,11 @@ export function ProjectDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                   setName(e.target.value);
                   if (!aliasEdited) setAlias(toHandle(e.target.value));
                 }}
-                placeholder="Site web"
+                placeholder="Projets personnels"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] text-muted-foreground">Tag de liaison</label>
+              <label className="text-[13px] text-muted-foreground">Tag du projet</label>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">@</span>
                 <Input
@@ -70,7 +85,7 @@ export function ProjectDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                     setAliasEdited(true);
                     setAlias(toHandle(e.target.value));
                   }}
-                  placeholder="site"
+                  placeholder="personnal"
                 />
               </div>
             </div>
@@ -80,7 +95,7 @@ export function ProjectDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               Annuler
             </Button>
             <Button type="submit" disabled={!name.trim()}>
-              Créer
+              {editing ? 'Enregistrer' : 'Créer'}
             </Button>
           </DialogFooter>
         </form>

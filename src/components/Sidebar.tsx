@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Archive,
   CalendarCheck,
   CalendarDays,
   Check,
@@ -16,21 +17,29 @@ import {
   ListTodo,
   Moon,
   PencilLine,
+  Pin,
+  PinOff,
   Plus,
   Settings,
+  SquarePen,
   Sun,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react';
 import { useStore, type View } from '../lib/store';
 import { useTheme } from '../lib/theme';
+import { confirm } from '../lib/confirm';
+import { prompt } from '../lib/prompt';
 import { todayIso } from '../lib/dates';
 import { cn } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
 import { ProjectDialog } from './ProjectDialog';
+import type { Project } from '../lib/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -96,10 +105,34 @@ export function Sidebar() {
   const tasks = useStore((s) => s.tasks);
   const setView = useStore((s) => s.setView);
   const openProject = useStore((s) => s.openProject);
+  const toggleProjectPin = useStore((s) => s.toggleProjectPin);
+  const updateProject = useStore((s) => s.updateProject);
+  const removeProject = useStore((s) => s.removeProject);
 
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [projectsCollapsed, setProjectsCollapsed] = useState(false);
   const [projectSort, setProjectSort] = useState<ProjectSort>('default');
+
+  function openProjectDialog(project: Project | null) {
+    setEditingProject(project);
+    setProjectDialogOpen(true);
+  }
+
+  async function renameProject(p: Project) {
+    const name = await prompt({ title: 'Renommer le projet', initialValue: p.name, confirmLabel: 'Renommer' });
+    if (name?.trim()) await updateProject(p.id, name.trim(), p.color, p.alias);
+  }
+
+  async function confirmRemoveProject(p: Project) {
+    const ok = await confirm({
+      title: 'Retirer le projet ?',
+      description: `« ${p.name} » sera supprimé. Ses tâches sont conservées mais ne seront plus rattachées à aucun projet.`,
+      confirmLabel: 'Retirer',
+      destructive: true,
+    });
+    if (ok) await removeProject(p.id);
+  }
 
   const today = todayIso();
   const top = tasks.filter((t) => t.parentId === null);
@@ -113,21 +146,20 @@ export function Sidebar() {
     };
     const total = (id: string) => top.filter((t) => t.projectId === id).length;
     const completed = (id: string) => top.filter((t) => t.projectId === id && t.done).length;
-    const arr = [...projects];
-    switch (projectSort) {
-      case 'recent':
-        return arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      case 'created':
-        return arr.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      case 'updated':
-        return arr.sort((a, b) => lastActivity(b.id).localeCompare(lastActivity(a.id)));
-      case 'count':
-        return arr.sort((a, b) => total(b.id) - total(a.id));
-      case 'completion':
-        return arr.sort((a, b) => completed(b.id) - completed(a.id));
-      default:
-        return arr.sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
-    }
+    const cmp: (a: Project, b: Project) => number =
+      projectSort === 'recent'
+        ? (a, b) => b.createdAt.localeCompare(a.createdAt)
+        : projectSort === 'created'
+          ? (a, b) => a.createdAt.localeCompare(b.createdAt)
+          : projectSort === 'updated'
+            ? (a, b) => lastActivity(b.id).localeCompare(lastActivity(a.id))
+            : projectSort === 'count'
+              ? (a, b) => total(b.id) - total(a.id)
+              : projectSort === 'completion'
+                ? (a, b) => completed(b.id) - completed(a.id)
+                : (a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt);
+    // Pinned projects always float to the top, regardless of the active order.
+    return [...projects].sort(cmp).sort((a, b) => Number(b.pinned) - Number(a.pinned));
   }, [projects, tasks, top, projectSort]);
 
   const nav: { view: View; icon: LucideIcon; label: string; count?: number }[] = [
@@ -207,7 +239,7 @@ export function Sidebar() {
           <button
             className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
             title="Nouveau projet"
-            onClick={() => setProjectDialogOpen(true)}
+            onClick={() => openProjectDialog(null)}
           >
             <Plus size={15} />
           </button>
@@ -219,27 +251,72 @@ export function Sidebar() {
               const count = top.filter((t) => !t.done && t.projectId === p.id).length;
               const active = view === 'project' && activeProjectId === p.id;
               return (
-                <button
+                <div
                   key={p.id}
-                  onClick={() => openProject(p.id)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md py-1.5 pl-6 pr-2.5 text-left text-sm transition-colors',
+                    'group flex items-center gap-2 rounded-md py-1.5 pl-4 pr-2.5 text-sm transition-colors',
                     active
                       ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
                       : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
                   )}
                 >
-                  <span className="shrink-0 text-muted-foreground">-</span>
-                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                  {count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
-                </button>
+                  <button onClick={() => openProject(p.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    {p.pinned ? (
+                      <Pin size={12} className="shrink-0 text-primary" />
+                    ) : (
+                      <span className="shrink-0 text-muted-foreground">-</span>
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  </button>
+
+                  {count ? (
+                    <span className="font-mono text-xs text-muted-foreground group-hover:hidden group-has-[[data-state=open]]:hidden">
+                      {count}
+                    </span>
+                  ) : null}
+
+                  <div className="hidden items-center gap-0.5 group-hover:flex group-has-[[data-state=open]]:flex">
+                    <button
+                      className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      title="Modifier le projet"
+                      onClick={() => openProjectDialog(p)}
+                    >
+                      <SquarePen size={14} />
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                          title="Options"
+                        >
+                          <Ellipsis size={14} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onSelect={() => void toggleProjectPin(p.id)}>
+                          {p.pinned ? <PinOff /> : <Pin />} {p.pinned ? 'Désépingler' : 'Épingler le projet'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => void renameProject(p)}>
+                          <PencilLine /> Renommer le projet
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled>
+                          <Archive /> Archiver
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => void confirmRemoveProject(p)}>
+                          <Trash2 /> Retirer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
               );
             })}
           </div>
         )}
       </div>
 
-      <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} />
+      <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} project={editingProject} />
 
       <div className="mt-2 flex flex-col gap-1 border-t border-sidebar-border pt-3">
         <PomodoroWidget />
