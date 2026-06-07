@@ -34,6 +34,7 @@ pub fn run() {
             commands::list_projects,
             commands::create_project,
             commands::update_project,
+            commands::set_project_pinned,
             commands::delete_project,
             commands::list_tags,
             commands::create_tag,

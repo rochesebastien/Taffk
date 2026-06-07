@@ -70,6 +70,15 @@ pub fn update_project(
 }
 
 #[tauri::command]
+pub fn set_project_pinned(
+    id: String,
+    pinned: bool,
+    db: State<'_, Db>,
+) -> Result<ProjectDto, String> {
+    db.set_project_pinned(&id, pinned).map_err(map_err)
+}
+
+#[tauri::command]
 pub fn delete_project(id: String, db: State<'_, Db>) -> Result<(), String> {
     db.delete_project(&id).map_err(map_err)
 }

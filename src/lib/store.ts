@@ -64,6 +64,8 @@ type Store = {
   scheduleForToday: (id: string, on: boolean) => Promise<void>;
 
   addProject: (name: string, color?: string | null, alias?: string | null) => Promise<Project>;
+  updateProject: (id: string, name: string, color: string | null, alias: string | null) => Promise<void>;
+  toggleProjectPin: (id: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   addTag: (name: string, color?: string | null) => Promise<Tag>;
 };
@@ -277,6 +279,16 @@ export const useStore = create<Store>((set, get) => ({
     const project = await api.createProject(name, color, alias);
     set({ projects: [...get().projects, project] });
     return project;
+  },
+  async updateProject(id, name, color, alias) {
+    const project = await api.updateProject(id, name, color, alias);
+    set({ projects: get().projects.map((p) => (p.id === id ? project : p)) });
+  },
+  async toggleProjectPin(id) {
+    const current = get().projects.find((p) => p.id === id);
+    if (!current) return;
+    const project = await api.setProjectPinned(id, !current.pinned);
+    set({ projects: get().projects.map((p) => (p.id === id ? project : p)) });
   },
   async removeProject(id) {
     await api.deleteProject(id);

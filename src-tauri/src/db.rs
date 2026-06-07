@@ -17,6 +17,7 @@ pub struct Db {
 const BOOTSTRAP: &str = r#"
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT, alias TEXT,
+  pinned INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0, archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
@@ -69,6 +70,7 @@ impl Db {
         // on an already-migrated DB is expected and ignored.
         let _ = conn.execute("ALTER TABLE tasks ADD COLUMN scheduled_time TEXT", []);
         let _ = conn.execute("ALTER TABLE projects ADD COLUMN alias TEXT", []);
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0", []);
         Ok(Db {
             conn: Arc::new(Mutex::new(conn)),
         })
@@ -348,11 +350,20 @@ impl Db {
     pub fn list_projects(&self) -> SqlResult<Vec<ProjectDto>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, name, color, alias, sort_order, archived, created_at
+            "SELECT id, name, color, alias, pinned, sort_order, archived, created_at
              FROM projects ORDER BY sort_order, created_at",
         )?;
         let rows = stmt.query_map([], Self::map_project)?;
         rows.collect()
+    }
+
+    pub fn set_project_pinned(&self, id: &str, pinned: bool) -> SqlResult<ProjectDto> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE projects SET pinned = ?1 WHERE id = ?2",
+            params![pinned as i64, id],
+        )?;
+        Self::query_project(&conn, id)
     }
 
     pub fn create_project(
@@ -398,15 +409,16 @@ impl Db {
             name: row.get(1)?,
             color: row.get(2)?,
             alias: row.get(3)?,
-            sort_order: row.get(4)?,
-            archived: row.get::<_, i64>(5)? != 0,
-            created_at: row.get(6)?,
+            pinned: row.get::<_, i64>(4)? != 0,
+            sort_order: row.get(5)?,
+            archived: row.get::<_, i64>(6)? != 0,
+            created_at: row.get(7)?,
         })
     }
 
     fn query_project(conn: &Connection, id: &str) -> SqlResult<ProjectDto> {
         conn.query_row(
-            "SELECT id, name, color, alias, sort_order, archived, created_at
+            "SELECT id, name, color, alias, pinned, sort_order, archived, created_at
              FROM projects WHERE id = ?1",
             params![id],
             Self::map_project,

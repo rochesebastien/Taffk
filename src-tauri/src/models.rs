@@ -41,6 +41,7 @@ pub struct ProjectDto {
     pub name: String,
     pub color: Option<String>,
     pub alias: Option<String>,
+    pub pinned: bool,
     pub sort_order: i64,
     pub archived: bool,
     pub created_at: String,

@@ -18,8 +18,8 @@ const timeLog: { taskId: string | null; seconds: number; kind: TimeKind; at: str
 
 function seed() {
   const createdAt = now();
-  const inbox: Project = { id: uid(), name: 'Inbox', color: '#3d44ff', alias: 'inbox', sortOrder: 0, archived: false, createdAt };
-  const site: Project = { id: uid(), name: 'Site web', color: '#22c55e', alias: 'site', sortOrder: 1, archived: false, createdAt };
+  const inbox: Project = { id: uid(), name: 'Inbox', color: '#3d44ff', alias: 'inbox', pinned: false, sortOrder: 0, archived: false, createdAt };
+  const site: Project = { id: uid(), name: 'Site web', color: '#22c55e', alias: 'site', pinned: false, sortOrder: 1, archived: false, createdAt };
   projects = [inbox, site];
 
   const urgent: Tag = { id: uid(), name: 'urgent', color: '#ef4444', createdAt };
@@ -114,7 +114,7 @@ export const mockBackend: Backend = {
     return clone(projects);
   },
   async createProject(name: string, color: string | null, alias: string | null) {
-    const p: Project = { id: uid(), name, color, alias, sortOrder: projects.length, archived: false, createdAt: now() };
+    const p: Project = { id: uid(), name, color, alias, pinned: false, sortOrder: projects.length, archived: false, createdAt: now() };
     projects.push(p);
     return clone(p);
   },
@@ -124,6 +124,12 @@ export const mockBackend: Backend = {
     p.name = name;
     p.color = color;
     p.alias = alias;
+    return clone(p);
+  },
+  async setProjectPinned(id: string, pinned: boolean) {
+    const p = projects.find((x) => x.id === id);
+    if (!p) throw new Error('project not found');
+    p.pinned = pinned;
     return clone(p);
   },
   async deleteProject(id: string) {

@@ -39,6 +39,7 @@ export type Project = {
   name: string;
   color: string | null;
   alias: string | null;
+  pinned: boolean;
   sortOrder: number;
   archived: boolean;
   createdAt: string;
@@ -89,6 +90,7 @@ export interface Backend {
   listProjects(): Promise<Project[]>;
   createProject(name: string, color: string | null, alias: string | null): Promise<Project>;
   updateProject(id: string, name: string, color: string | null, alias: string | null): Promise<Project>;
+  setProjectPinned(id: string, pinned: boolean): Promise<Project>;
   deleteProject(id: string): Promise<void>;
 
   listTags(): Promise<Tag[]>;
@@ -113,6 +115,7 @@ const tauriBackend: Backend = {
   listProjects: () => invoke('list_projects'),
   createProject: (name, color, alias) => invoke('create_project', { name, color, alias }),
   updateProject: (id, name, color, alias) => invoke('update_project', { id, name, color, alias }),
+  setProjectPinned: (id, pinned) => invoke('set_project_pinned', { id, pinned }),
   deleteProject: (id) => invoke('delete_project', { id }),
 
   listTags: () => invoke('list_tags'),
