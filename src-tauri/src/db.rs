@@ -16,7 +16,7 @@ pub struct Db {
 
 const BOOTSTRAP: &str = r#"
 CREATE TABLE IF NOT EXISTS projects (
-  id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT,
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT, alias TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0, archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
@@ -68,6 +68,7 @@ impl Db {
         // SQLite has no `ADD COLUMN IF NOT EXISTS`; the duplicate-column error
         // on an already-migrated DB is expected and ignored.
         let _ = conn.execute("ALTER TABLE tasks ADD COLUMN scheduled_time TEXT", []);
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN alias TEXT", []);
         Ok(Db {
             conn: Arc::new(Mutex::new(conn)),
         })
@@ -130,6 +131,12 @@ impl Db {
         if let Some(v) = patch.project_id {
             conn.execute(
                 "UPDATE tasks SET project_id = ?1 WHERE id = ?2",
+                params![v, patch.id],
+            )?;
+        }
+        if let Some(v) = patch.parent_id {
+            conn.execute(
+                "UPDATE tasks SET parent_id = ?1 WHERE id = ?2",
                 params![v, patch.id],
             )?;
         }
@@ -341,20 +348,25 @@ impl Db {
     pub fn list_projects(&self) -> SqlResult<Vec<ProjectDto>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, name, color, sort_order, archived, created_at
+            "SELECT id, name, color, alias, sort_order, archived, created_at
              FROM projects ORDER BY sort_order, created_at",
         )?;
         let rows = stmt.query_map([], Self::map_project)?;
         rows.collect()
     }
 
-    pub fn create_project(&self, name: &str, color: Option<&str>) -> SqlResult<ProjectDto> {
+    pub fn create_project(
+        &self,
+        name: &str,
+        color: Option<&str>,
+        alias: Option<&str>,
+    ) -> SqlResult<ProjectDto> {
         let conn = self.conn.lock().unwrap();
         let id = new_id();
         conn.execute(
-            "INSERT INTO projects (id, name, color, created_at)
-             VALUES (?1, ?2, ?3, datetime('now'))",
-            params![id, name, color],
+            "INSERT INTO projects (id, name, color, alias, created_at)
+             VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+            params![id, name, color, alias],
         )?;
         Self::query_project(&conn, &id)
     }
@@ -364,11 +376,12 @@ impl Db {
         id: &str,
         name: &str,
         color: Option<&str>,
+        alias: Option<&str>,
     ) -> SqlResult<ProjectDto> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE projects SET name = ?1, color = ?2 WHERE id = ?3",
-            params![name, color, id],
+            "UPDATE projects SET name = ?1, color = ?2, alias = ?3 WHERE id = ?4",
+            params![name, color, alias, id],
         )?;
         Self::query_project(&conn, id)
     }
@@ -384,15 +397,16 @@ impl Db {
             id: row.get(0)?,
             name: row.get(1)?,
             color: row.get(2)?,
-            sort_order: row.get(3)?,
-            archived: row.get::<_, i64>(4)? != 0,
-            created_at: row.get(5)?,
+            alias: row.get(3)?,
+            sort_order: row.get(4)?,
+            archived: row.get::<_, i64>(5)? != 0,
+            created_at: row.get(6)?,
         })
     }
 
     fn query_project(conn: &Connection, id: &str) -> SqlResult<ProjectDto> {
         conn.query_row(
-            "SELECT id, name, color, sort_order, archived, created_at
+            "SELECT id, name, color, alias, sort_order, archived, created_at
              FROM projects WHERE id = ?1",
             params![id],
             Self::map_project,
@@ -449,7 +463,7 @@ mod tests {
     fn task_project_round_trip() {
         let db = Db::open_in_memory().expect("open in-memory db");
 
-        let project = db.create_project("Inbox", Some("#3b82f6")).unwrap();
+        let project = db.create_project("Inbox", Some("#3b82f6"), Some("inbox")).unwrap();
         assert_eq!(project.name, "Inbox");
         assert_eq!(project.color.as_deref(), Some("#3b82f6"));
 
@@ -479,6 +493,7 @@ mod tests {
             title: None,
             notes: None,
             project_id: None,
+            parent_id: None,
             done: Some(true),
             status: None,
             scheduled_for: None,

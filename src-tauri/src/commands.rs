@@ -50,9 +50,11 @@ pub fn list_projects(db: State<'_, Db>) -> Result<Vec<ProjectDto>, String> {
 pub fn create_project(
     name: String,
     color: Option<String>,
+    alias: Option<String>,
     db: State<'_, Db>,
 ) -> Result<ProjectDto, String> {
-    db.create_project(&name, color.as_deref()).map_err(map_err)
+    db.create_project(&name, color.as_deref(), alias.as_deref())
+        .map_err(map_err)
 }
 
 #[tauri::command]
@@ -60,9 +62,10 @@ pub fn update_project(
     id: String,
     name: String,
     color: Option<String>,
+    alias: Option<String>,
     db: State<'_, Db>,
 ) -> Result<ProjectDto, String> {
-    db.update_project(&id, &name, color.as_deref())
+    db.update_project(&id, &name, color.as_deref(), alias.as_deref())
         .map_err(map_err)
 }
 
