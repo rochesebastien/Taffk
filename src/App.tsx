@@ -3,7 +3,10 @@ import { Sidebar } from './components/Sidebar';
 import { TaskListView } from './components/TaskListView';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CalendarView } from './components/CalendarView';
+import { SettingsView } from './components/SettingsView';
 import { TaskDetail } from './components/TaskDetail';
+import { ConfirmDialog } from './components/ConfirmDialog';
+import { PromptDialog } from './components/PromptDialog';
 import { KeyboardHelp } from './components/KeyboardHelp';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useStore, type View } from './lib/store';
@@ -59,12 +62,16 @@ export default function App() {
             <KanbanBoard />
           ) : view === 'calendar' ? (
             <CalendarView />
+          ) : view === 'settings' ? (
+            <SettingsView />
           ) : (
             <TaskListView />
           )}
         </main>
         {selectedTask && <TaskDetail task={selectedTask} />}
         {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
+        <ConfirmDialog />
+        <PromptDialog />
       </div>
     </TooltipProvider>
   );
