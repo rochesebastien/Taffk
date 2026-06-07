@@ -143,8 +143,9 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
               </Tooltip>
             )}
             {task.estimateMinutes > 0 && (
-              <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground/70">
-                <Timer size={13} /> {formatEstimate(task.estimateMinutes)}
+              <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs leading-none text-muted-foreground/70">
+                <Timer size={13} className="shrink-0" />
+                {formatEstimate(task.estimateMinutes)}
               </span>
             )}
             {task.notes.trim() && <FileText size={14} className="ml-auto shrink-0 text-muted-foreground/50" />}
@@ -218,7 +219,11 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
     <div
       ref={ref}
       draggable={draggable}
-      onDragStart={onDragStart}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', task.id);
+        e.dataTransfer.effectAllowed = 'move';
+        onDragStart?.();
+      }}
       onDragEnd={onDragEnd}
       className={cn(
         'w-full overflow-hidden rounded-xl border bg-card transition-all',

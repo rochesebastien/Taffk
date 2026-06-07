@@ -14,6 +14,7 @@ import {
   FolderClock,
   FolderClosed,
   FolderHeart,
+  Inbox,
   ListTodo,
   Moon,
   PencilLine,
@@ -166,7 +167,7 @@ export function Sidebar() {
 
   const nav: { view: View; icon: LucideIcon; label: string; count?: number }[] = [
     { view: 'today', icon: CalendarCheck, label: "Aujourd'hui", count: todayCount },
-    { view: 'all', icon: ListTodo, label: 'Toutes les tâches', count: allCount },
+    { view: 'all', icon: Inbox, label: 'Toutes les tâches', count: allCount },
     { view: 'board', icon: Columns3, label: 'Tableau' },
     { view: 'calendar', icon: CalendarDays, label: 'Planning' },
   ];

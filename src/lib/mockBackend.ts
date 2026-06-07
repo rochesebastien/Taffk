@@ -18,7 +18,7 @@ const timeLog: { taskId: string | null; seconds: number; kind: TimeKind; at: str
 
 function seed() {
   const createdAt = now();
-  const inbox: Project = { id: uid(), name: 'Inbox', color: '#3d44ff', alias: 'inbox', pinned: false, sortOrder: 0, archived: false, createdAt };
+  const inbox: Project = { id: uid(), name: 'Toutes les tâches', color: '#3d44ff', alias: 'inbox', pinned: false, sortOrder: 0, archived: false, createdAt };
   const site: Project = { id: uid(), name: 'Site web', color: '#22c55e', alias: 'site', pinned: false, sortOrder: 1, archived: false, createdAt };
   projects = [inbox, site];
 

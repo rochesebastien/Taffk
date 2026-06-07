@@ -1,13 +1,16 @@
 import { useState } from 'react';
+import { Circle, CircleCheck, CircleEllipsis, FolderOutput, Timer } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { formatEstimate } from '../lib/dates';
 import { cn } from '../lib/utils';
 import { QuickAdd } from './QuickAdd';
+import { Badge } from './ui/badge';
 import type { Task, TaskStatus } from '../lib/api';
 
-const COLUMNS: { status: TaskStatus; label: string; dot: string }[] = [
-  { status: 'todo', label: 'À faire', dot: 'bg-muted-foreground' },
-  { status: 'in_progress', label: 'En cours', dot: 'bg-primary' },
-  { status: 'done', label: 'Terminé', dot: 'bg-emerald-500' },
+const COLUMNS: { status: TaskStatus; label: string; Icon: typeof Circle; color: string }[] = [
+  { status: 'todo', label: 'À faire', Icon: Circle, color: 'text-muted-foreground' },
+  { status: 'in_progress', label: 'En cours', Icon: CircleEllipsis, color: 'text-primary' },
+  { status: 'done', label: 'Terminé', Icon: CircleCheck, color: 'text-emerald-500' },
 ];
 
 function statusOf(t: Task): TaskStatus {
@@ -38,9 +41,6 @@ export function KanbanBoard() {
     <div className="flex h-full flex-col px-6">
       <header className="flex items-end justify-between gap-4 pb-4 pt-8">
         <h1 className="font-display text-3xl font-bold tracking-tight">Tableau Kanban</h1>
-        <span className="font-mono text-xs text-muted-foreground">
-          {tasks.filter((t) => t.parentId === null && !t.done).length} en cours
-        </span>
       </header>
 
       <div className="pb-3">
@@ -61,6 +61,7 @@ export function KanbanBoard() {
               )}
               onDragOver={(e) => {
                 e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
                 setOverCol(col.status);
               }}
               onDragLeave={(e) => {
@@ -69,7 +70,7 @@ export function KanbanBoard() {
               onDrop={() => onDrop(col.status)}
             >
               <div className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-3">
-                <span className={cn('size-2 rounded-full', col.dot)} />
+                <col.Icon size={14} className={cn('shrink-0', col.color)} />
                 <span className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {col.label}
                 </span>
@@ -83,10 +84,16 @@ export function KanbanBoard() {
                     .map((id) => tags.find((t) => t.id === id))
                     .filter((t): t is NonNullable<typeof t> => Boolean(t));
                   return (
-                    <button
+                    <div
                       key={task.id}
+                      role="button"
+                      tabIndex={0}
                       draggable
-                      onDragStart={() => setDragId(task.id)}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', task.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        setDragId(task.id);
+                      }}
                       onDragEnd={() => {
                         setDragId(null);
                         setOverCol(null);
@@ -101,24 +108,27 @@ export function KanbanBoard() {
                         {task.title}
                       </span>
                       {(project || taskTags.length > 0 || task.estimateMinutes > 0) && (
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                           {project && (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span className="size-2 rounded-full" style={{ background: project.color ?? 'var(--muted-foreground)' }} />
+                            <span className="inline-flex items-center gap-1 leading-none">
+                              <FolderOutput size={13} className="shrink-0" style={project.color ? { color: project.color } : undefined} />
                               {project.name}
                             </span>
                           )}
                           {taskTags.map((t) => (
-                            <span key={t.id} className="font-mono" style={{ color: t.color ?? undefined }}>
+                            <Badge key={t.id} variant="secondary" className="text-xs" style={t.color ? { color: t.color } : undefined}>
                               #{t.name}
-                            </span>
+                            </Badge>
                           ))}
                           {task.estimateMinutes > 0 && (
-                            <span className="font-mono text-muted-foreground/70">{task.estimateMinutes}m</span>
+                            <span className="inline-flex items-center gap-1 font-mono leading-none text-muted-foreground/70">
+                              <Timer size={13} className="shrink-0" />
+                              {formatEstimate(task.estimateMinutes)}
+                            </span>
                           )}
                         </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
                 {colTasks.length === 0 && (

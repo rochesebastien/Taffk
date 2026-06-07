@@ -46,6 +46,9 @@ export function TaskListView() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDone, setOverDone] = useState(false);
+  const [overOpen, setOverOpen] = useState(false);
+
+  const dragging = dragId ? visible.find((t) => t.id === dragId) ?? null : null;
 
   useEffect(() => {
     if (focusedId && !visible.some((t) => t.id === focusedId)) setFocusedId(null);
@@ -91,39 +94,67 @@ export function TaskListView() {
           {open.length === 0 && done.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground">
               <p>Rien ici pour l'instant.</p>
-              <p className="mt-1 text-sm text-muted-foreground/60">Ajoute une tâche ci-dessus — appuie sur Entrée.</p>
             </div>
           ) : (
             <div className="mx-auto mt-4 flex w-fit min-w-[72%] max-w-full flex-col gap-2">
-              <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                {open.length} en cours
+              <div
+                onDragOver={(e) => {
+                  if (!dragging?.done) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  setOverOpen(true);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverOpen(false);
+                }}
+                onDrop={() => {
+                  if (dragId && dragging?.done) void toggleDone(dragId, false);
+                  setDragId(null);
+                  setOverOpen(false);
+                }}
+                className={cn(
+                  'flex flex-col gap-2 rounded-xl transition-colors',
+                  overOpen && 'bg-accent/40 ring-2 ring-ring ring-offset-2 ring-offset-background',
+                )}
+              >
+                <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  {open.length} en cours
+                </div>
+                {open.map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    projects={projects}
+                    tags={tags}
+                    focused={task.id === focusedId}
+                    draggable
+                    onDragStart={() => setDragId(task.id)}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverDone(false);
+                      setOverOpen(false);
+                    }}
+                  />
+                ))}
+                {open.length === 0 && dragging?.done && (
+                  <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-muted-foreground/60">
+                    Déposer ici pour rouvrir
+                  </div>
+                )}
               </div>
-              {open.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  projects={projects}
-                  tags={tags}
-                  focused={task.id === focusedId}
-                  draggable
-                  onDragStart={() => setDragId(task.id)}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setOverDone(false);
-                  }}
-                />
-              ))}
-              {(done.length > 0 || dragId) && (
+              {(done.length > 0 || (dragId && !dragging?.done)) && (
                 <div
                   onDragOver={(e) => {
+                    if (dragging?.done) return;
                     e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
                     setOverDone(true);
                   }}
                   onDragLeave={(e) => {
                     if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverDone(false);
                   }}
                   onDrop={() => {
-                    if (dragId) void toggleDone(dragId, true);
+                    if (dragId && !dragging?.done) void toggleDone(dragId, true);
                     setDragId(null);
                     setOverDone(false);
                   }}
@@ -136,7 +167,20 @@ export function TaskListView() {
                     Terminées
                   </div>
                   {done.map((task) => (
-                    <TaskItem key={task.id} task={task} projects={projects} tags={tags} focused={task.id === focusedId} />
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      projects={projects}
+                      tags={tags}
+                      focused={task.id === focusedId}
+                      draggable
+                      onDragStart={() => setDragId(task.id)}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setOverDone(false);
+                        setOverOpen(false);
+                      }}
+                    />
                   ))}
                   {done.length === 0 && (
                     <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-muted-foreground/60">
