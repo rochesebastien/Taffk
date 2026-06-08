@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useStore } from '../lib/store';
-import { isTypingTarget } from '../lib/keyboard';
-import { todayIso } from '../lib/dates';
-import { cn } from '../lib/utils';
+import { useStore } from '../../lib/store';
+import { isTypingTarget } from '../../lib/keyboard';
+import { todayIso } from '../../lib/dates';
+import { cn } from '../../lib/utils';
 import { QuickAdd } from './QuickAdd';
 import { TaskItem } from './TaskItem';
-import type { Task } from '../lib/api';
+import type { Task } from '../../lib/api';
 
 function sortTasks(a: Task, b: Task) {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;

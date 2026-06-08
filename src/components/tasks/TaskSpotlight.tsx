@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AtSign, CalendarCheck, Check, CornerDownLeft, Hash, Hourglass, Inbox, Plus, Tag as TagIcon, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { parseQuickAdd, useStore } from '../lib/store';
-import { ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../lib/dates';
-import { cn } from '../lib/utils';
-import { Badge } from './ui/badge';
-import { Calendar } from './ui/calendar';
+import { parseQuickAdd, useStore } from '../../lib/store';
+import { ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../../lib/dates';
+import { cn } from '../../lib/utils';
+import { Badge } from '../ui/badge';
+import { Calendar } from '../ui/calendar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+} from '../ui/dropdown-menu';
 
 function parseLocalDate(iso: string | null): Date | undefined {
   if (!iso) return undefined;

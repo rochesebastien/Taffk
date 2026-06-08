@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { usePrompt } from '../lib/prompt';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { usePrompt } from '../../lib/prompt';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
+} from '../ui/dialog';
 
 export function PromptDialog() {
   const open = usePrompt((s) => s.open);

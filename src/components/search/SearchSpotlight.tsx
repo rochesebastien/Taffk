@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AtSign, CheckCircle2, Circle, FileText, Hash, Search } from 'lucide-react';
-import { useStore } from '../lib/store';
-import { cn } from '../lib/utils';
+import { useStore } from '../../lib/store';
+import { cn } from '../../lib/utils';
 
 type MatchKind = 'title' | 'project' | 'tag' | 'notes';
 
