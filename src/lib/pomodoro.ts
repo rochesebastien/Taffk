@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { api } from './api';
 import { useStore } from './store';
+import { readSettings } from './settings';
 
-const DEFAULT_REPEATS = 3;
-const DEFAULT_SLICE = 25; // minutes per Pomodoro slice
+const settings = readSettings();
+const DEFAULT_REPEATS = settings.pomodoroRepeats;
+const DEFAULT_SLICE = settings.pomodoroSliceMinutes; // minutes per Pomodoro slice
 
 async function logWork(taskId: string | null, seconds: number) {
   if (seconds < 1) return;

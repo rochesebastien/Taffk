@@ -1,13 +1,30 @@
 import { create } from 'zustand';
 import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus, type TimeEntry } from './api';
 import { isoDate } from './dates';
+import { readSettings } from './settings';
 
 export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'time' | 'settings';
+
+export type SettingsSection =
+  | 'general'
+  | 'profile'
+  | 'appearance'
+  | 'archives'
+  | 'data'
+  | 'shortcuts'
 
 export type QuickAddParsed = {
   title: string;
   tagNames: string[];
   projectName: string | null;
+};
+
+/** Initial values to pre-fill the quick-add spotlight (e.g. from a calendar slot). */
+export type SpotlightPrefill = {
+  date?: string | null;
+  time?: string | null;
+  estimateMinutes?: number;
+  projectId?: string | null;
 };
 
 /** `Buy milk #errand @home` → title + tag names + project name. */
@@ -36,18 +53,25 @@ type Store = {
   tags: Tag[];
   timeEntries: TimeEntry[];
   view: View;
+  prevView: View;
+  prevProjectId: string | null;
+  settingsSection: SettingsSection;
   activeProjectId: string | null;
   selectedTaskId: string | null;
   spotlightOpen: boolean;
+  spotlightPrefill: SpotlightPrefill | null;
   searchOpen: boolean;
   loaded: boolean;
 
   load: () => Promise<void>;
   reloadTimeEntries: () => Promise<void>;
   setView: (view: View) => void;
+  openSettings: () => void;
+  closeSettings: () => void;
+  setSettingsSection: (section: SettingsSection) => void;
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
-  openSpotlight: () => void;
+  openSpotlight: (prefill?: SpotlightPrefill) => void;
   closeSpotlight: () => void;
   openSearch: () => void;
   closeSearch: () => void;
@@ -75,12 +99,14 @@ type Store = {
   moveTask: (id: string, status: TaskStatus) => Promise<void>;
   patchTask: (patch: TaskPatch) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  archiveTask: (id: string, archived: boolean) => Promise<void>;
   setTaskTags: (taskId: string, tagIds: string[]) => Promise<void>;
   scheduleForToday: (id: string, on: boolean) => Promise<void>;
 
   addProject: (name: string, color?: string | null, alias?: string | null) => Promise<Project>;
   updateProject: (id: string, name: string, color: string | null, alias: string | null) => Promise<void>;
   toggleProjectPin: (id: string) => Promise<void>;
+  archiveProject: (id: string, archived: boolean) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   addTag: (name: string, color?: string | null) => Promise<Tag>;
 };
@@ -90,10 +116,14 @@ export const useStore = create<Store>((set, get) => ({
   projects: [],
   tags: [],
   timeEntries: [],
-  view: 'today',
+  view: readSettings().startupView,
+  prevView: 'today',
+  prevProjectId: null,
+  settingsSection: 'general',
   activeProjectId: null,
   selectedTaskId: null,
   spotlightOpen: false,
+  spotlightPrefill: null,
   searchOpen: false,
   loaded: false,
 
@@ -114,17 +144,27 @@ export const useStore = create<Store>((set, get) => ({
   setView(view) {
     set({ view, activeProjectId: view === 'project' ? get().activeProjectId : null });
   },
+  openSettings() {
+    set({ prevView: get().view, prevProjectId: get().activeProjectId, view: 'settings' });
+  },
+  closeSettings() {
+    const v = get().prevView;
+    set({ view: v, activeProjectId: v === 'project' ? get().prevProjectId : null });
+  },
+  setSettingsSection(section) {
+    set({ settingsSection: section });
+  },
   openProject(projectId) {
     set({ view: 'project', activeProjectId: projectId });
   },
   selectTask(id) {
     set({ selectedTaskId: id });
   },
-  openSpotlight() {
-    set({ spotlightOpen: true });
+  openSpotlight(prefill) {
+    set({ spotlightOpen: true, spotlightPrefill: prefill ?? null });
   },
   closeSpotlight() {
-    set({ spotlightOpen: false });
+    set({ spotlightOpen: false, spotlightPrefill: null });
   },
   openSearch() {
     set({ searchOpen: true });
@@ -307,6 +347,14 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
 
+  async archiveTask(id, archived) {
+    const task = await api.setTaskArchived(id, archived);
+    set({
+      tasks: get().tasks.map((t) => (t.id === id ? task : t)),
+      selectedTaskId: archived && get().selectedTaskId === id ? null : get().selectedTaskId,
+    });
+  },
+
   async setTaskTags(taskId, tagIds) {
     const task = await api.setTaskTags(taskId, tagIds);
     set({ tasks: get().tasks.map((t) => (t.id === taskId ? task : t)) });
@@ -330,6 +378,14 @@ export const useStore = create<Store>((set, get) => ({
     if (!current) return;
     const project = await api.setProjectPinned(id, !current.pinned);
     set({ projects: get().projects.map((p) => (p.id === id ? project : p)) });
+  },
+  async archiveProject(id, archived) {
+    const project = await api.setProjectArchived(id, archived);
+    set({
+      projects: get().projects.map((p) => (p.id === id ? project : p)),
+      view: archived && get().activeProjectId === id ? 'today' : get().view,
+      activeProjectId: archived && get().activeProjectId === id ? null : get().activeProjectId,
+    });
   },
   async removeProject(id) {
     await api.deleteProject(id);
