@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CornerLeftUp, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CornerLeftUp, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import type { Task } from '../../lib/api';
 
 type Props = { task: Task };
@@ -52,6 +53,7 @@ export function TaskDetail({ task }: Props) {
   const promoteSubtask = useStore((s) => s.promoteSubtask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
+  const openProject = useStore((s) => s.openProject);
   const applyTaskText = useStore((s) => s.applyTaskText);
   const startWork = usePomodoro((s) => s.start);
   const pausePomodoro = usePomodoro((s) => s.pause);
@@ -191,7 +193,24 @@ export function TaskDetail({ task }: Props) {
 
           <div className="flex flex-col gap-3">
             <Field label="Projet">
-              {isSubtask ? (
+              <div className="flex items-center gap-1.5">
+                {project && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => {
+                          openProject(project.id);
+                          selectTask(null);
+                        }}
+                        className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        <ArrowLeft size={15} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Ouvrir le projet</TooltipContent>
+                  </Tooltip>
+                )}
+                {isSubtask ? (
                 <span className="inline-flex items-center gap-2 text-sm text-foreground/80">
                   {project ? (
                     <>
@@ -220,7 +239,8 @@ export function TaskDetail({ task }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+                )}
+              </div>
             </Field>
 
             <Field label="Estimation">
@@ -294,8 +314,13 @@ export function TaskDetail({ task }: Props) {
                   {running ? 'En focus…' : 'Reprendre'}
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" className="gap-1.5" disabled={locked} onClick={() => startWork(task.id)}>
-                  <Play size={13} /> Focus {sliceMinutes} min
+                <Button
+                  size="sm"
+                  className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={locked}
+                  onClick={() => startWork(task.id)}
+                >
+                  <Play size={13} className="fill-current" /> Focus {sliceMinutes} min
                 </Button>
               )}
             </Field>
