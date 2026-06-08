@@ -12,12 +12,13 @@ import {
   Clock2,
   Columns3,
   Ellipsis,
+  ExternalLink,
   FolderClock,
   FolderClosed,
   FolderHeart,
+  HandMetal,
   Inbox,
   ListTodo,
-  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   PencilLine,
@@ -27,11 +28,11 @@ import {
   Search,
   Settings,
   SquarePen,
-  Sun,
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
 import { useStore, type View } from '../lib/store';
+import { useSettings } from '../lib/settings';
 import { useTheme } from '../lib/theme';
 import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
 import { confirm } from '../lib/confirm';
@@ -69,10 +70,11 @@ type NavItemProps = {
   collapsed: boolean;
   count?: number;
   kbd?: string;
+  external?: boolean;
   onClick: () => void;
 };
 
-function NavItem({ icon: Icon, label, active, collapsed, count, kbd, onClick }: NavItemProps) {
+export function NavItem({ icon: Icon, label, active, collapsed, count, kbd, external, onClick }: NavItemProps) {
   const button = (
     <button
       onClick={onClick}
@@ -88,6 +90,9 @@ function NavItem({ icon: Icon, label, active, collapsed, count, kbd, onClick }: 
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
       {!collapsed && kbd ? <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">{kbd}</Kbd> : null}
       {!collapsed && count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
+      {!collapsed && external ? (
+        <ExternalLink size={13} className="shrink-0 text-muted-foreground/60" />
+      ) : null}
     </button>
   );
   if (!collapsed) return button;
@@ -121,17 +126,21 @@ function SortItem({
 }
 
 export function Sidebar() {
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
+  const profileName = useSettings((s) => s.profileName);
+  const profileEmoji = useSettings((s) => s.profileEmoji);
   const { width, setWidth, collapsed, setCollapsed, toggleCollapsed } = useSidebar();
   const view = useStore((s) => s.view);
   const activeProjectId = useStore((s) => s.activeProjectId);
   const projects = useStore((s) => s.projects);
   const tasks = useStore((s) => s.tasks);
   const setView = useStore((s) => s.setView);
+  const openSettings = useStore((s) => s.openSettings);
   const openProject = useStore((s) => s.openProject);
   const openSpotlight = useStore((s) => s.openSpotlight);
   const openSearch = useStore((s) => s.openSearch);
   const toggleProjectPin = useStore((s) => s.toggleProjectPin);
+  const archiveProject = useStore((s) => s.archiveProject);
   const updateProject = useStore((s) => s.updateProject);
   const removeProject = useStore((s) => s.removeProject);
 
@@ -203,7 +212,10 @@ export function Sidebar() {
                 ? (a, b) => completed(b.id) - completed(a.id)
                 : (a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt);
     // Pinned projects always float to the top, regardless of the active order.
-    return [...projects].sort(cmp).sort((a, b) => Number(b.pinned) - Number(a.pinned));
+    return [...projects]
+      .filter((p) => !p.archived)
+      .sort(cmp)
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned));
   }, [projects, tasks, top, projectSort]);
 
   const nav: { view: View; icon: LucideIcon; label: string; count?: number }[] = [
@@ -254,7 +266,7 @@ export function Sidebar() {
       {collapsed ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button onClick={openSpotlight} className={cn(railBtn, 'mb-1.5')}>
+            <button onClick={() => openSpotlight()} className={cn(railBtn, 'mb-1.5')}>
               <SquarePen size={17} className="shrink-0 text-primary" />
             </button>
           </TooltipTrigger>
@@ -262,7 +274,7 @@ export function Sidebar() {
         </Tooltip>
       ) : (
         <button
-          onClick={openSpotlight}
+          onClick={() => openSpotlight()}
           className="group mb-1.5 flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
         >
           <SquarePen size={17} className="shrink-0 text-primary" />
@@ -407,7 +419,7 @@ export function Sidebar() {
                         <DropdownMenuItem onSelect={() => void renameProject(p)}>
                           <PencilLine /> Renommer le projet
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem onSelect={() => void archiveProject(p.id, true)}>
                           <Archive /> Archiver
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -444,36 +456,32 @@ export function Sidebar() {
         {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={toggle} className={railBtn}>
-                {theme === 'dark' ? (
-                  <Moon size={16} className="text-muted-foreground" />
+              <div className="flex items-center justify-center px-2 py-2">
+                {profileEmoji.trim() ? (
+                  <span className="text-base leading-none">{profileEmoji.trim()}</span>
                 ) : (
-                  <Sun size={16} className="text-muted-foreground" />
+                  <HandMetal size={16} className="text-muted-foreground" />
                 )}
-              </button>
+              </div>
             </TooltipTrigger>
-            <TooltipContent side="right">{theme === 'dark' ? 'Sombre' : 'Clair'}</TooltipContent>
+            <TooltipContent side="right">{profileName.trim() || 'Profil'}</TooltipContent>
           </Tooltip>
         ) : (
-          <button
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-            onClick={toggle}
-            title="Changer de thème"
-          >
-            {theme === 'dark' ? (
-              <Moon size={16} className="text-muted-foreground" />
+          <div className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-sidebar-foreground/80">
+            {profileEmoji.trim() ? (
+              <span className="text-base leading-none">{profileEmoji.trim()}</span>
             ) : (
-              <Sun size={16} className="text-muted-foreground" />
+              <HandMetal size={16} className="text-muted-foreground" />
             )}
-            <span>{theme === 'dark' ? 'Sombre' : 'Clair'}</span>
-          </button>
+            <span className="min-w-0 flex-1 truncate">{profileName.trim() || 'Profil'}</span>
+          </div>
         )}
         <NavItem
           icon={Settings}
           label="Paramètres"
           active={view === 'settings'}
           collapsed={collapsed}
-          onClick={() => setView('settings')}
+          onClick={openSettings}
         />
       </div>
 
