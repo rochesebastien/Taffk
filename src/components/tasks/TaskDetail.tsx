@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react';
 import { CornerLeftUp, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { useStore } from '../lib/store';
-import { usePomodoro } from '../lib/pomodoro';
-import { confirm } from '../lib/confirm';
-import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isoDate, todayIso } from '../lib/dates';
-import { cn } from '../lib/utils';
+import { useStore } from '../../lib/store';
+import { usePomodoro } from '../../lib/pomodoro';
+import { confirm } from '../../lib/confirm';
+import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isoDate, todayIso } from '../../lib/dates';
+import { cn } from '../../lib/utils';
 import { MarkdownNotes } from './MarkdownNotes';
-import { Checkbox } from './ui/checkbox';
-import { Button } from './ui/button';
-import { Calendar } from './ui/calendar';
+import { Checkbox } from '../ui/checkbox';
+import { Button } from '../ui/button';
+import { Calendar } from '../ui/calendar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Task } from '../lib/api';
+} from '../ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import type { Task } from '../../lib/api';
 
 type Props = { task: Task };
 
@@ -53,14 +53,15 @@ export function TaskDetail({ task }: Props) {
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
   const applyTaskText = useStore((s) => s.applyTaskText);
-  const startWork = usePomodoro((s) => s.startWork);
+  const startWork = usePomodoro((s) => s.start);
   const pausePomodoro = usePomodoro((s) => s.pause);
   const resumePomodoro = usePomodoro((s) => s.resume);
-  const phase = usePomodoro((s) => s.phase);
+  const current = usePomodoro((s) => s.current);
+  const sliceMinutes = usePomodoro((s) => s.sliceMinutes);
   const running = usePomodoro((s) => s.running);
   const focusTaskId = usePomodoro((s) => s.focusTaskId);
 
-  const isFocusTarget = focusTaskId === task.id && phase !== 'idle';
+  const isFocusTarget = focusTaskId === task.id && current > 0;
   const locked = task.done;
 
   const [title, setTitle] = useState(task.title);
@@ -294,7 +295,7 @@ export function TaskDetail({ task }: Props) {
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" className="gap-1.5" disabled={locked} onClick={() => startWork(task.id)}>
-                  <Play size={13} /> Focus 25 min
+                  <Play size={13} /> Focus {sliceMinutes} min
                 </Button>
               )}
             </Field>
