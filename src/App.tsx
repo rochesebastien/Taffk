@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { SettingsSidebar } from './components/SettingsSidebar';
 import { TaskListView } from './components/tasks/TaskListView';
 import { KanbanBoard } from './components/views/KanbanBoard';
 import { CalendarView } from './components/views/CalendarView';
@@ -13,7 +14,9 @@ import { PromptDialog } from './components/dialog/PromptDialog';
 import { KeyboardHelp } from './components/KeyboardHelp';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useStore, type View } from './lib/store';
-import { isTypingTarget } from './lib/keyboard';
+import { useSettings } from './lib/settings';
+import { setToggleShortcut } from './lib/api';
+import { isTypingTarget, matchesAccel } from './lib/keyboard';
 
 const VIEW_KEYS: Record<string, View> = { '1': 'today', '2': 'all', '3': 'board', '4': 'calendar', '5': 'time' };
 
@@ -22,6 +25,7 @@ export default function App() {
   const loaded = useStore((s) => s.loaded);
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
+  const closeSettings = useStore((s) => s.closeSettings);
   const selectedTaskId = useStore((s) => s.selectedTaskId);
   const selectTask = useStore((s) => s.selectTask);
   const selectedTask = useStore((s) => s.tasks.find((t) => t.id === s.selectedTaskId) ?? null);
@@ -31,10 +35,13 @@ export default function App() {
   const openSearch = useStore((s) => s.openSearch);
   const closeSearch = useStore((s) => s.closeSearch);
 
+  const quickAddShortcut = useSettings((s) => s.shortcutQuickAdd);
+
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     void load();
+    void setToggleShortcut(useSettings.getState().shortcutToggle);
   }, [load]);
 
   useEffect(() => {
@@ -43,6 +50,7 @@ export default function App() {
         if (helpOpen) setHelpOpen(false);
         else if (searchOpen) closeSearch();
         else if (selectedTaskId) selectTask(null);
+        else if (view === 'settings') closeSettings();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
@@ -55,6 +63,11 @@ export default function App() {
         openSearch();
         return;
       }
+      if (!isTypingTarget(e.target) && matchesAccel(e, quickAddShortcut)) {
+        e.preventDefault();
+        openSpotlight();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
 
       if (e.key === '?') {
@@ -64,19 +77,16 @@ export default function App() {
         openSearch();
       } else if (VIEW_KEYS[e.key]) {
         setView(VIEW_KEYS[e.key]);
-      } else if (e.key === 'a' || e.key === 'n') {
-        e.preventDefault();
-        openSpotlight();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [helpOpen, searchOpen, closeSearch, selectedTaskId, selectTask, setView, openSpotlight, openSearch]);
+  }, [helpOpen, searchOpen, closeSearch, selectedTaskId, selectTask, view, closeSettings, setView, openSpotlight, openSearch, quickAddShortcut]);
 
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-        <Sidebar />
+        {view === 'settings' ? <SettingsSidebar /> : <Sidebar />}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {!loaded ? (
             <div className="grid h-full place-items-center text-muted-foreground/60">…</div>

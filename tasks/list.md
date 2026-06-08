@@ -61,7 +61,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked/deferred
 - [x] Remove dead files (generate_test_notes.py, capture, etc.)
 - [x] Final build/check + push
 
-## Phase 7 — SuperProductivity inspiration (post-foundation)
+## Phase 7 — Inspiration (post-foundation)
 - [x] Subtasks (parent/child, drawer UI, progress badge, cascade)
 - [x] Keyboard navigation & shortcuts (1–4 views, A add, J/K/X/Enter, ? help overlay)
 - [ ] Repeating tasks (recurring) — candidate

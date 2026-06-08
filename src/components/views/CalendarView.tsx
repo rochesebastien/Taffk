@@ -7,7 +7,6 @@ import { format, getDay, parse, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '../../lib/store';
-import { prompt } from '../../lib/prompt';
 import { isoDate, minutesToTime, timeToMinutes } from '../../lib/dates';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -38,18 +37,12 @@ function dateAt(day: string, minutes: number): Date {
   return new Date(y, m - 1, d, Math.floor(minutes / 60), minutes % 60);
 }
 
-function patchFromRange(start: Date, end: Date, allDay: boolean) {
-  const scheduledFor = isoDate(start);
-  if (allDay) return { scheduledFor, scheduledTime: null };
-  const minutes = Math.max(15, Math.round((end.getTime() - start.getTime()) / 60000));
-  return { scheduledFor, scheduledTime: minutesToTime(start.getHours() * 60 + start.getMinutes()), estimateMinutes: minutes };
-}
-
 export function CalendarView() {
   const tasks = useStore((s) => s.tasks);
   const projects = useStore((s) => s.projects);
   const patchTask = useStore((s) => s.patchTask);
-  const quickAdd = useStore((s) => s.quickAdd);
+  const openSpotlight = useStore((s) => s.openSpotlight);
+  const spotlightOpen = useStore((s) => s.spotlightOpen);
   const selectTask = useStore((s) => s.selectTask);
 
   const [date, setDate] = useState(() => new Date());
@@ -59,14 +52,16 @@ export function CalendarView() {
 
   const events = useMemo<CalEvent[]>(() => {
     return tasks
-      .filter((t) => t.parentId === null && t.scheduledFor)
+      .filter((t) => t.parentId === null && !t.archived && t.scheduledFor)
       .map((t) => {
         const timed = t.scheduledTime != null;
         const startMin = timeToMinutes(t.scheduledTime) ?? DEFAULT_START;
         const start = dateAt(t.scheduledFor!, timed ? startMin : 0);
+        // All-day events span a full day (end-exclusive) so RBC renders one cell
+        // and they stay draggable into the time grid.
         const end = timed
           ? new Date(start.getTime() + (t.estimateMinutes || DEFAULT_DURATION) * 60000)
-          : start;
+          : new Date(start.getTime() + 24 * 60 * 60000);
         return { id: t.id, title: t.title, start, end, allDay: !timed, task: t };
       });
   }, [tasks]);
@@ -74,20 +69,40 @@ export function CalendarView() {
   function onChange({ event, start, end, isAllDay }: EventInteractionArgs<CalEvent>) {
     const s = new Date(start);
     const e = new Date(end);
-    void patchTask({ id: event.id, ...patchFromRange(s, e, Boolean(isAllDay)) });
-  }
-
-  async function onSelectSlot({ start, action }: { start: Date; action: string }) {
-    if (action !== 'select' && action !== 'click') return;
-    const title = await prompt({ title: 'Nouvelle tâche', placeholder: 'Titre  (#tag  @projet)', confirmLabel: 'Ajouter' });
-    if (!title?.trim()) return;
-    await quickAdd(title, {
-      date: isoDate(start),
-      time: view === 'month' ? null : minutesToTime(start.getHours() * 60 + start.getMinutes()),
+    if (isAllDay) {
+      void patchTask({ id: event.id, scheduledFor: isoDate(s), scheduledTime: null });
+      return;
+    }
+    // Dropping an all-day event onto the grid converts it to a timed task with a
+    // sensible default; a move/resize of a timed event keeps its dragged span.
+    const minutes = event.allDay
+      ? DEFAULT_DURATION
+      : Math.max(15, Math.round((e.getTime() - s.getTime()) / 60000));
+    void patchTask({
+      id: event.id,
+      scheduledFor: isoDate(s),
+      scheduledTime: minutesToTime(s.getHours() * 60 + s.getMinutes()),
+      estimateMinutes: minutes,
     });
   }
 
-  const label = format(date, view === 'day' ? 'EEEE d MMMM' : "'Semaine du' d MMMM yyyy", { locale: fr });
+  function onSelectSlot({ start, end, action }: { start: Date; end: Date; action: string }) {
+    if (action !== 'select' && action !== 'click') return;
+    if (spotlightOpen) return;
+    const raw = Math.round((end.getTime() - start.getTime()) / 60000);
+    openSpotlight({
+      date: isoDate(start),
+      time: view === 'month' ? null : minutesToTime(start.getHours() * 60 + start.getMinutes()),
+      estimateMinutes: view === 'month' ? undefined : raw >= 15 ? raw : DEFAULT_DURATION,
+    });
+  }
+
+  const label = format(
+    date,
+    view === 'day' ? 'EEEE d MMMM' : view === 'month' ? 'MMMM yyyy' : "'Semaine du' d MMMM yyyy",
+    { locale: fr },
+  );
+  const navUnit = view === 'day' ? 'day' : view === 'month' ? 'month' : 'week';
 
   return (
     <div className="flex h-full flex-col px-6">
@@ -98,25 +113,25 @@ export function CalendarView() {
         </div>
         <div className="flex items-center gap-2">
           <ButtonGroup>
-            {(['week', 'day'] as RbcView[]).map((v) => (
+            {(['month', 'week', 'day'] as RbcView[]).map((v) => (
               <Button
                 key={v}
                 size="sm"
                 variant={view === v ? 'secondary' : 'outline'}
                 onClick={() => setView(v)}
               >
-                {v === 'week' ? 'Semaine' : 'Jour'}
+                {v === 'month' ? 'Mois' : v === 'week' ? 'Semaine' : 'Jour'}
               </Button>
             ))}
           </ButtonGroup>
           <ButtonGroup>
-            <Button variant="outline" size="icon" onClick={() => setDate(localizer.add(date, -1, view === 'day' ? 'day' : 'week'))}>
+            <Button variant="outline" size="sm" className="px-2" onClick={() => setDate(localizer.add(date, -1, navUnit))}>
               <ChevronLeft size={16} />
             </Button>
             <Button variant="outline" size="sm" onClick={() => setDate(new Date())}>
               Aujourd'hui
             </Button>
-            <Button variant="outline" size="icon" onClick={() => setDate(localizer.add(date, 1, view === 'day' ? 'day' : 'week'))}>
+            <Button variant="outline" size="sm" className="px-2" onClick={() => setDate(localizer.add(date, 1, navUnit))}>
               <ChevronRight size={16} />
             </Button>
           </ButtonGroup>
@@ -132,7 +147,7 @@ export function CalendarView() {
           view={view}
           onNavigate={setDate}
           onView={setView}
-          views={['week', 'day']}
+          views={['month', 'week', 'day']}
           toolbar={false}
           step={30}
           timeslots={2}

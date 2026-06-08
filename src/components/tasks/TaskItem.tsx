@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileText, FolderOutput, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
+import { Archive, FolderOutput, NotepadText, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
 import { formatEstimate, todayIso } from '../../lib/dates';
@@ -8,6 +8,7 @@ import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { TaskContextMenu } from './TaskContextMenu';
+import { NotesPopup } from './NotesPopup';
 import type { Project, Tag, Task } from '../../lib/api';
 
 type Props = {
@@ -28,6 +29,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
   const toggleDone = useStore((s) => s.toggleDone);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
+  const archiveTask = useStore((s) => s.archiveTask);
   const openProject = useStore((s) => s.openProject);
   const applyTaskText = useStore((s) => s.applyTaskText);
   const tasks = useStore((s) => s.tasks);
@@ -43,7 +45,9 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
   const parent = task.parentId ? tasks.find((t) => t.id === task.parentId) ?? null : null;
   const children =
     task.parentId === null
-      ? tasks.filter((t) => t.parentId === task.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      ? tasks
+          .filter((t) => t.parentId === task.id && !t.archived)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       : [];
   const subTotal = children.length;
 
@@ -61,6 +65,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const startEdit = () => {
     setDraft(task.title);
@@ -85,7 +90,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
     <div
       className={cn(
         'group flex items-center gap-3 px-4 py-3.5 transition-colors',
-        nested && 'pl-10 hover:bg-muted/30',
+        nested && 'py-2 pl-10 hover:bg-muted/30',
         task.done && nested && 'opacity-60',
       )}
     >
@@ -148,7 +153,6 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
                 {formatEstimate(task.estimateMinutes)}
               </span>
             )}
-            {task.notes.trim() && <FileText size={14} className="ml-auto shrink-0 text-muted-foreground/50" />}
           </>
         )}
       </div>
@@ -199,6 +203,28 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
           </Tooltip>
         )}
 
+        {task.notes.trim() && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className={actionBtn} onClick={() => setNotesOpen(true)}>
+                <NotepadText size={15} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Notes</TooltipContent>
+          </Tooltip>
+        )}
+
+        {task.done && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className={actionBtn} onClick={() => void archiveTask(task.id, true)}>
+                <Archive size={15} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Archiver</TooltipContent>
+          </Tooltip>
+        )}
+
         <Tooltip>
           <TooltipTrigger asChild>
             <button className={actionBtn} onClick={() => selectTask(isOpen ? null : task.id)}>
@@ -211,9 +237,20 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
     </div>
   );
 
+  // NotesPopup must sit OUTSIDE TaskContextMenu: its content is portaled, but
+  // React still bubbles events through the tree, so keeping it inside the
+  // context-menu trigger would surface the task menu on right-click in the popup.
+  const notesPopup = <NotesPopup task={task} open={notesOpen} onOpenChange={setNotesOpen} />;
+
   const row = <TaskContextMenu task={task}>{rowContent}</TaskContextMenu>;
 
-  if (nested) return row;
+  if (nested)
+    return (
+      <>
+        {row}
+        {notesPopup}
+      </>
+    );
 
   return (
     <div
@@ -240,6 +277,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
           ))}
         </div>
       )}
+      {notesPopup}
     </div>
   );
 }

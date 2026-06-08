@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, CalendarCheck, Check, CornerDownLeft, Hash, Hourglass, Inbox, Plus, Tag as TagIcon, X } from 'lucide-react';
+import { AtSign, CalendarCheck, Check, Clock, CornerDownLeft, Hash, Hourglass, Inbox, Plus, Tag as TagIcon, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { parseQuickAdd, useStore } from '../../lib/store';
+import { useSettings } from '../../lib/settings';
 import { ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../../lib/dates';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
@@ -45,6 +46,8 @@ export function TaskSpotlight() {
   const tags = useStore((s) => s.tags);
   const view = useStore((s) => s.view);
   const activeProjectId = useStore((s) => s.activeProjectId);
+  const prefill = useStore((s) => s.spotlightPrefill);
+  const keepOpen = useSettings((s) => s.keepSpotlightOpen);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,10 +55,11 @@ export function TaskSpotlight() {
   const [caret, setCaret] = useState(0);
   // `undefined` → infer from text (`@projet`); `null` → no project; else explicit id.
   const [projectId, setProjectId] = useState<string | null | undefined>(
-    view === 'project' ? activeProjectId : undefined,
+    prefill?.projectId !== undefined ? prefill.projectId : view === 'project' ? activeProjectId : undefined,
   );
-  const [date, setDate] = useState<string | null>(todayIso());
-  const [estimate, setEstimate] = useState(0);
+  const [date, setDate] = useState<string | null>(prefill?.date !== undefined ? prefill.date : todayIso());
+  const [time, setTime] = useState<string | null>(prefill?.time ?? null);
+  const [estimate, setEstimate] = useState(prefill?.estimateMinutes ?? 0);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [acIndex, setAcIndex] = useState(0);
   const [acHidden, setAcHidden] = useState(false);
@@ -151,10 +155,14 @@ export function TaskSpotlight() {
 
   function submit() {
     if (!parsed.title.trim()) return;
-    void quickAdd(value, { projectId, tagIds, date, estimateMinutes: estimate || undefined });
-    setValue('');
-    setTagIds([]);
-    focusInput(0);
+    void quickAdd(value, { projectId, tagIds, date, time, estimateMinutes: estimate || undefined });
+    if (keepOpen) {
+      setValue('');
+      setTagIds([]);
+      focusInput(0);
+    } else {
+      close();
+    }
   }
 
   function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -190,7 +198,7 @@ export function TaskSpotlight() {
   return (
     <div
       className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] duration-150 animate-in fade-in-0"
-      onMouseDown={(e) => {
+      onClick={(e) => {
         if (e.target === e.currentTarget) close();
       }}
     >
@@ -310,6 +318,18 @@ export function TaskSpotlight() {
               >
                 <X size={13} />
               </button>
+            )}
+
+            {date && (
+              <label className={cn(chip, time && 'text-foreground', 'cursor-text')}>
+                <Clock size={15} />
+                <input
+                  type="time"
+                  value={time ?? ''}
+                  onChange={(e) => setTime(e.target.value || null)}
+                  className="w-[4.25rem] bg-transparent text-sm outline-none"
+                />
+              </label>
             )}
 
             <DropdownMenu>

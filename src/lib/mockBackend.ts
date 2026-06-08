@@ -1,4 +1,4 @@
-import type { Backend, NewTask, Project, Tag, Task, TaskPatch, TimeEntry, TimeKind } from './api';
+import type { Backend, DataStats, NewTask, Project, Tag, Task, TaskPatch, TimeEntry, TimeKind } from './api';
 
 /**
  * In-memory backend used when the app runs outside the Tauri shell (plain
@@ -29,7 +29,7 @@ function seed() {
   const base = {
     notes: '', parentId: null, done: false, status: 'todo' as const,
     scheduledTime: null as string | null,
-    dueDate: null, estimateMinutes: 0, spentMinutes: 0, createdAt, updatedAt: createdAt, completedAt: null,
+    dueDate: null, estimateMinutes: 0, spentMinutes: 0, createdAt, updatedAt: createdAt, completedAt: null, archived: false, customProps: {},
   };
   tasks = [
     { ...base, id: uid(), title: 'Préparer la revue de sprint', projectId: inbox.id, scheduledFor: today(), scheduledTime: '09:00', estimateMinutes: 30, sortOrder: 0, tagIds: [urgent.id] },
@@ -129,6 +129,8 @@ export const mockBackend: Backend = {
       createdAt: ts,
       updatedAt: ts,
       completedAt: null,
+      archived: false,
+      customProps: {},
       tagIds: input.tagIds ?? [],
     };
     tasks.push(task);
@@ -148,6 +150,13 @@ export const mockBackend: Backend = {
   },
   async deleteTask(id: string) {
     tasks = tasks.filter((t) => t.id !== id);
+  },
+  async setTaskArchived(id: string, archived: boolean) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) throw new Error('task not found');
+    t.archived = archived;
+    t.updatedAt = now();
+    return clone(t);
   },
   async setTaskTags(taskId: string, tagIds: string[]) {
     const t = tasks.find((x) => x.id === taskId);
@@ -183,6 +192,12 @@ export const mockBackend: Backend = {
     const p = projects.find((x) => x.id === id);
     if (!p) throw new Error('project not found');
     p.pinned = pinned;
+    return clone(p);
+  },
+  async setProjectArchived(id: string, archived: boolean) {
+    const p = projects.find((x) => x.id === id);
+    if (!p) throw new Error('project not found');
+    p.archived = archived;
     return clone(p);
   },
   async deleteProject(id: string) {
@@ -237,5 +252,28 @@ export const mockBackend: Backend = {
     return timeLog
       .filter((e) => e.kind === 'work' && (e.endedAt ?? e.startedAt).slice(0, 10) === day)
       .reduce((sum, e) => sum + e.durationSeconds, 0);
+  },
+
+  async dataStats(): Promise<DataStats> {
+    return {
+      path: '(aperçu navigateur — données en mémoire)',
+      fileBytes: 0,
+      projects: projects.length,
+      tags: tags.length,
+      tasks: tasks.length,
+      timeEntries: timeLog.length,
+    };
+  },
+  async exportData() {
+    /* no-op in browser preview */
+  },
+  async importData() {
+    /* no-op in browser preview */
+  },
+  async resetData() {
+    projects = [];
+    tags = [];
+    tasks = [];
+    timeLog = [];
   },
 };

@@ -31,6 +31,8 @@ export type Task = {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  archived: boolean;
+  customProps: Record<string, string>;
   tagIds: string[];
 };
 
@@ -86,6 +88,16 @@ export type TaskPatch = {
   estimateMinutes?: number;
   spentMinutes?: number;
   sortOrder?: number;
+  customProps?: Record<string, string>;
+};
+
+export type DataStats = {
+  path: string;
+  fileBytes: number;
+  projects: number;
+  tags: number;
+  tasks: number;
+  timeEntries: number;
 };
 
 export interface Backend {
@@ -93,6 +105,7 @@ export interface Backend {
   createTask(input: NewTask): Promise<Task>;
   updateTask(patch: TaskPatch): Promise<Task>;
   deleteTask(id: string): Promise<void>;
+  setTaskArchived(id: string, archived: boolean): Promise<Task>;
   setTaskTags(taskId: string, tagIds: string[]): Promise<Task>;
   reorderTasks(ids: string[]): Promise<void>;
 
@@ -100,6 +113,7 @@ export interface Backend {
   createProject(name: string, color: string | null, alias: string | null): Promise<Project>;
   updateProject(id: string, name: string, color: string | null, alias: string | null): Promise<Project>;
   setProjectPinned(id: string, pinned: boolean): Promise<Project>;
+  setProjectArchived(id: string, archived: boolean): Promise<Project>;
   deleteProject(id: string): Promise<void>;
 
   listTags(): Promise<Tag[]>;
@@ -113,6 +127,15 @@ export interface Backend {
   listTimeEntries(): Promise<TimeEntry[]>;
   /** Total work seconds logged today (local date). */
   timeToday(): Promise<number>;
+
+  /** File path + row counts for the SQLite database. */
+  dataStats(): Promise<DataStats>;
+  /** Serialize the whole DB to a JSON file at `path`. */
+  exportData(path: string): Promise<void>;
+  /** Replace the whole DB with the JSON backup at `path`. */
+  importData(path: string): Promise<void>;
+  /** Wipe all tasks/projects/tags/time entries. */
+  resetData(): Promise<void>;
 }
 
 const tauriBackend: Backend = {
@@ -120,6 +143,7 @@ const tauriBackend: Backend = {
   createTask: (input) => invoke('create_task', { input }),
   updateTask: (patch) => invoke('update_task', { patch }),
   deleteTask: (id) => invoke('delete_task', { id }),
+  setTaskArchived: (id, archived) => invoke('set_task_archived', { id, archived }),
   setTaskTags: (taskId, tagIds) => invoke('set_task_tags', { taskId, tagIds }),
   reorderTasks: (ids) => invoke('reorder_tasks', { ids }),
 
@@ -127,6 +151,7 @@ const tauriBackend: Backend = {
   createProject: (name, color, alias) => invoke('create_project', { name, color, alias }),
   updateProject: (id, name, color, alias) => invoke('update_project', { id, name, color, alias }),
   setProjectPinned: (id, pinned) => invoke('set_project_pinned', { id, pinned }),
+  setProjectArchived: (id, archived) => invoke('set_project_archived', { id, archived }),
   deleteProject: (id) => invoke('delete_project', { id }),
 
   listTags: () => invoke('list_tags'),
@@ -136,9 +161,52 @@ const tauriBackend: Backend = {
   logTime: (taskId, seconds, kind) => invoke('log_time', { taskId, seconds, kind }),
   listTimeEntries: () => invoke('list_time_entries'),
   timeToday: () => invoke('time_today'),
+
+  dataStats: () => invoke('data_stats'),
+  exportData: (path) => invoke('export_data', { path }),
+  importData: (path) => invoke('import_data', { path }),
+  resetData: () => invoke('reset_data'),
 };
 
 export const isTauri =
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 export const api: Backend = isTauri ? tauriBackend : mockBackend;
+
+/** Open a URL in the user's default browser (system shell in Tauri, new tab in a plain browser). */
+export async function openExternal(url: string): Promise<void> {
+  if (isTauri) {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl(url);
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+
+/** Reveal a file in the OS file manager (no-op outside Tauri). */
+export async function revealPath(path: string): Promise<void> {
+  if (!isTauri) return;
+  const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+  await revealItemInDir(path);
+}
+
+/** Re-register the global show/hide shortcut (no-op outside Tauri). */
+export async function setToggleShortcut(accelerator: string): Promise<void> {
+  if (!isTauri) return;
+  await invoke('set_toggle_shortcut', { accelerator });
+}
+
+/** Native "save as" dialog for a JSON file. Returns the chosen path, or null if cancelled. */
+export async function pickSavePath(defaultName: string): Promise<string | null> {
+  if (!isTauri) return null;
+  const { save } = await import('@tauri-apps/plugin-dialog');
+  return (await save({ defaultPath: defaultName, filters: [{ name: 'JSON', extensions: ['json'] }] })) ?? null;
+}
+
+/** Native "open file" dialog for a JSON file. Returns the chosen path, or null if cancelled. */
+export async function pickOpenPath(): Promise<string | null> {
+  if (!isTauri) return null;
+  const { open } = await import('@tauri-apps/plugin-dialog');
+  const res = await open({ multiple: false, filters: [{ name: 'JSON', extensions: ['json'] }] });
+  return typeof res === 'string' ? res : null;
+}

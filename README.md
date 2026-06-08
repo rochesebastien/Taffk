@@ -7,10 +7,9 @@
 > Local-first personal work manager. Your tasks, projects, focus time — on your
 > machine, in a single SQLite file. No cloud, no login, no telemetry.
 
-Taffk is a keyboard-first desktop app for managing personal work, in the spirit
-of SuperProductivity: plan your day, organise tasks into projects and tags,
-work them on a Kanban board or a weekly planner, and track focus time with a
-built-in Pomodoro timer.
+Taffk is a keyboard-first desktop app for managing personal work: plan your day,
+organise tasks into projects and tags, work them on a Kanban board or a weekly
+planner, and track focus time with a built-in Pomodoro timer.
 
 ## Features
 

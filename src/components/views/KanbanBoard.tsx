@@ -209,7 +209,7 @@ export function KanbanBoard() {
       <div className="flex min-h-0 flex-1 gap-3 pb-6">
         {COLUMNS.map((col) => {
           const colTasks = tasks
-            .filter((t) => t.parentId === null && statusOf(t) === col.status)
+            .filter((t) => t.parentId === null && !t.archived && statusOf(t) === col.status)
             .filter((t) => tagFilter.length === 0 || t.tagIds.some((id) => tagFilter.includes(id)))
             .filter((t) => projectFilter.length === 0 || (t.projectId !== null && projectFilter.includes(t.projectId)))
             .sort(compare);
