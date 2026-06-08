@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "sign:win": "pwsh -File src-tauri/scripts/sign-windows.ps1"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",

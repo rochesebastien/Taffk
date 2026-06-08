@@ -75,7 +75,66 @@ automatiquement par GitHub Actions.
 
 ---
 
-## 3. Vérifs continues (CI)
+## 3. Avertissement Windows Defender / SmartScreen (« éditeur inconnu »)
+
+Au premier lancement, Windows affiche un écran bleu SmartScreen
+(« Windows a protégé votre ordinateur » / « éditeur inconnu »). Ce n'est **pas
+un bug ni un virus** : l'exécutable n'est tout simplement **pas signé
+numériquement**, donc pour Windows l'éditeur est inconnu et l'app n'a pas encore
+de réputation SmartScreen.
+
+Deux niveaux de réponse, selon le besoin.
+
+### a) Pour votre propre machine (gratuit, immédiat)
+
+Signez le build avec un certificat **auto-signé** installé comme « éditeur
+approuvé ». Windows fait alors confiance à la signature et l'alerte disparaît
+**sur cette machine**.
+
+```sh
+npm run tauri build          # produit target/release/taffk.exe + l'installateur NSIS
+npm run sign:win             # crée/approuve un certificat et signe les .exe
+```
+
+Le script [`src-tauri/scripts/sign-windows.ps1`](src-tauri/scripts/sign-windows.ps1) :
+
+1. crée (ou réutilise) un certificat de signature de code auto-signé ;
+2. l'installe dans « Racines de confiance » + « Éditeurs approuvés » de
+   l'utilisateur courant (Windows peut demander une confirmation la 1ʳᵉ fois) ;
+3. signe l'exécutable et l'installateur, horodatage RFC-3161 inclus.
+
+> ⚠️ Un certificat auto-signé n'est reconnu que là où il est installé : il ne
+> supprime **pas** l'alerte pour les autres personnes qui téléchargent la
+> release. Pour ça, voir (b).
+
+### b) Pour la distribution (release GitHub, tout le monde)
+
+Il faut une **signature de confiance** reconnue par Windows partout :
+
+| Option | Coût indicatif | Effet sur SmartScreen |
+| --- | --- | --- |
+| **Azure Trusted Signing** | ~10 $/mois | Reconnu immédiatement (recommandé indé). |
+| Certificat **OV** (Authenticode) | ~100–300 $/an | Réputation acquise progressivement. |
+| Certificat **EV** | ~300–500 $/an (token matériel) | Réputation immédiate. |
+
+Tauri signe automatiquement le bundle si une de ces méthodes est configurée.
+Pour l'intégrer au workflow [`release.yml`](.github/workflows/release.yml) :
+
+- **Azure Trusted Signing** — ajouter les inputs `tauri-action`
+  (`azureTenantId`, `azureClientId`, `azureClientSecret`, l'endpoint et le nom
+  de profil de signature) alimentés par des *secrets* GitHub.
+- **Certificat .pfx** — renseigner dans `bundle.windows` de
+  [`tauri.conf.json`](src-tauri/tauri.conf.json) `certificateThumbprint`,
+  `digestAlgorithm` (`sha256`) et `timestampUrl`, et fournir le certificat à
+  l'environnement de build via un secret.
+
+Tant qu'aucune de ces options n'est configurée, la release reste **non signée**
+(l'alerte SmartScreen est donc attendue côté téléchargement) : c'est volontaire
+pour ne pas casser la CI, qui ne dispose d'aucun secret.
+
+---
+
+## 4. Vérifs continues (CI)
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) tourne sur chaque push
 vers `main` et chaque PR :
