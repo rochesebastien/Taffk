@@ -1,8 +1,9 @@
 name: Release
 
 # Publie une release GitHub quand un tag `v*` est poussé (ex: `v0.0.1`).
-# Peut aussi être lancé manuellement en sélectionnant un tag existant
-# (Actions → Release → Run workflow → choisir le tag).
+# Peut aussi être lancé manuellement (Actions → Release → Run workflow) :
+# dans ce cas le tag est dérivé de la version dans `src-tauri/tauri.conf.json`
+# (ex: version 0.0.1 → release `v0.0.1`), et tauri-action crée le tag.
 #
 # La release contient trois manières de récupérer Taffk :
 #   - Installateur Windows   : `Taffk_<version>_x64-setup.exe` (NSIS)
@@ -31,6 +32,19 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Determine release tag
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            tag="${{ github.ref_name }}"
+          else
+            version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+            tag="v${version}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $tag"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -47,8 +61,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Taffk ${{ github.ref_name }}
+          tagName: ${{ steps.meta.outputs.tag }}
+          releaseName: Taffk ${{ steps.meta.outputs.tag }}
           releaseDraft: false
           prerelease: false
           # On ne produit que l'installateur NSIS (.exe). Le binaire portable
@@ -66,7 +80,7 @@ jobs:
       - name: Stage portable executable
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}' -replace '^v', ''
+          $version = '${{ steps.meta.outputs.tag }}' -replace '^v', ''
           $dest = "Taffk_${version}_x64_portable.exe"
           Copy-Item 'src-tauri/target/release/taffk.exe' $dest
           "PORTABLE_EXE=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
@@ -74,6 +88,6 @@ jobs:
       - name: Attach portable executable to the release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.meta.outputs.tag }}
           files: ${{ env.PORTABLE_EXE }}
           fail_on_unmatched_files: true
