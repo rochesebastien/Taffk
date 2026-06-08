@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText, FolderOutput, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
-import { useStore } from '../lib/store';
-import { usePomodoro } from '../lib/pomodoro';
-import { formatEstimate, todayIso } from '../lib/dates';
-import { cn } from '../lib/utils';
-import { Badge } from './ui/badge';
-import { Checkbox } from './ui/checkbox';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { useStore } from '../../lib/store';
+import { usePomodoro } from '../../lib/pomodoro';
+import { formatEstimate, todayIso } from '../../lib/dates';
+import { cn } from '../../lib/utils';
+import { Badge } from '../ui/badge';
+import { Checkbox } from '../ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { TaskContextMenu } from './TaskContextMenu';
-import type { Project, Tag, Task } from '../lib/api';
+import type { Project, Tag, Task } from '../../lib/api';
 
 type Props = {
   task: Task;
@@ -33,10 +33,10 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
   const tasks = useStore((s) => s.tasks);
   const isOpen = useStore((s) => s.selectedTaskId === task.id);
 
-  const phase = usePomodoro((s) => s.phase);
+  const current = usePomodoro((s) => s.current);
   const running = usePomodoro((s) => s.running);
   const focusTaskId = usePomodoro((s) => s.focusTaskId);
-  const startWork = usePomodoro((s) => s.startWork);
+  const start = usePomodoro((s) => s.start);
   const pause = usePomodoro((s) => s.pause);
   const resume = usePomodoro((s) => s.resume);
 
@@ -57,7 +57,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
 
   const isToday = task.scheduledFor === todayIso();
   const canFocus = subTotal === 0 && !task.done;
-  const isFocusTarget = focusTaskId === task.id && phase !== 'idle' && !task.done;
+  const isFocusTarget = focusTaskId === task.id && current > 0 && !task.done;
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
@@ -158,7 +158,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
           {canFocus && !isFocusTarget && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className={actionBtn} onClick={() => startWork(task.id)}>
+                <button className={actionBtn} onClick={() => start(task.id)}>
                   <Play size={15} />
                 </button>
               </TooltipTrigger>

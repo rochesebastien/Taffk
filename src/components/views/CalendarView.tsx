@@ -6,13 +6,13 @@ import withDragAndDrop, {
 import { format, getDay, parse, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useStore } from '../lib/store';
-import { prompt } from '../lib/prompt';
-import { isoDate, minutesToTime, timeToMinutes } from '../lib/dates';
-import { cn } from '../lib/utils';
-import { Button } from './ui/button';
-import { ButtonGroup } from './ui/button-group';
-import type { Task } from '../lib/api';
+import { useStore } from '../../lib/store';
+import { prompt } from '../../lib/prompt';
+import { isoDate, minutesToTime, timeToMinutes } from '../../lib/dates';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { ButtonGroup } from '../ui/button-group';
+import type { Task } from '../../lib/api';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';

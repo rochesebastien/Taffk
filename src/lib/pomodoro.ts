@@ -2,9 +2,8 @@ import { create } from 'zustand';
 import { api } from './api';
 import { useStore } from './store';
 
-export type Phase = 'idle' | 'work' | 'break';
-
-const DEFAULT_WORK = 25 * 60;
+const DEFAULT_REPEATS = 3;
+const DEFAULT_SLICE = 25; // minutes per Pomodoro slice
 
 async function logWork(taskId: string | null, seconds: number) {
   if (seconds < 1) return;
@@ -17,88 +16,86 @@ async function logWork(taskId: string | null, seconds: number) {
 }
 
 type Pomodoro = {
-  phase: Phase;
   running: boolean;
-  remaining: number;
-  duration: number;
+  remaining: number; // seconds left in the current slice
+  current: number; // 0 = idle, 1..repeats = active slice index
+  sliceMinutes: number;
+  repeats: number;
   focusTaskId: string | null;
-  completed: number;
-  workMinutes: number;
-  breakMinutes: number;
   todaySeconds: number;
 
-  startWork: (taskId?: string | null) => void;
-  startBreak: () => void;
+  toggle: () => void;
+  start: (taskId?: string | null) => void;
   pause: () => void;
   resume: () => void;
-  stop: () => void;
+  reset: () => void;
   tick: () => void;
-  setDurations: (workMin: number, breakMin: number) => void;
+  setRepeats: (n: number) => void;
+  setSliceMinutes: (m: number) => void;
   refreshToday: () => Promise<void>;
 };
 
 export const usePomodoro = create<Pomodoro>((set, get) => ({
-  phase: 'idle',
   running: false,
-  remaining: DEFAULT_WORK,
-  duration: DEFAULT_WORK,
+  remaining: DEFAULT_SLICE * 60,
+  current: 0,
+  sliceMinutes: DEFAULT_SLICE,
+  repeats: DEFAULT_REPEATS,
   focusTaskId: null,
-  completed: 0,
-  workMinutes: 25,
-  breakMinutes: 5,
   todaySeconds: 0,
 
-  startWork(taskId) {
-    const dur = get().workMinutes * 60;
-    set({
-      phase: 'work',
-      running: true,
-      duration: dur,
-      remaining: dur,
-      focusTaskId: taskId ?? get().focusTaskId ?? null,
-    });
+  toggle() {
+    const { current, running, sliceMinutes } = get();
+    if (current === 0) {
+      set({ current: 1, running: true, remaining: sliceMinutes * 60 });
+    } else {
+      set({ running: !running });
+    }
   },
 
-  startBreak() {
-    const dur = get().breakMinutes * 60;
-    set({ phase: 'break', running: true, duration: dur, remaining: dur });
+  start(taskId) {
+    const { current, sliceMinutes, remaining, focusTaskId } = get();
+    if (current > 0) void logWork(focusTaskId, sliceMinutes * 60 - remaining);
+    set({ focusTaskId: taskId ?? null, current: 1, running: true, remaining: sliceMinutes * 60 });
   },
 
   pause() {
     set({ running: false });
   },
+
   resume() {
-    if (get().phase !== 'idle') set({ running: true });
+    if (get().current > 0) set({ running: true });
   },
 
-  stop() {
-    const { phase, duration, remaining, focusTaskId } = get();
-    if (phase === 'work') void logWork(focusTaskId, duration - remaining);
-    const dur = get().workMinutes * 60;
-    set({ phase: 'idle', running: false, duration: dur, remaining: dur, focusTaskId: null });
+  reset() {
+    const { current, sliceMinutes, remaining, focusTaskId } = get();
+    if (current > 0) void logWork(focusTaskId, sliceMinutes * 60 - remaining);
+    set({ current: 0, running: false, remaining: sliceMinutes * 60, focusTaskId: null });
   },
 
   tick() {
-    const { running, remaining, phase, duration, focusTaskId } = get();
-    if (!running || phase === 'idle') return;
+    const { running, current, remaining, sliceMinutes, repeats, focusTaskId } = get();
+    if (!running || current === 0) return;
     if (remaining > 1) {
       set({ remaining: remaining - 1 });
       return;
     }
-    // Phase finished.
-    if (phase === 'work') {
-      void logWork(focusTaskId, duration);
-      set({ completed: get().completed + 1 });
-      get().startBreak();
+    // Slice finished — bank the full slice and advance, or end the session.
+    void logWork(focusTaskId, sliceMinutes * 60);
+    if (current < repeats) {
+      set({ current: current + 1, remaining: sliceMinutes * 60 });
     } else {
-      const dur = get().workMinutes * 60;
-      set({ phase: 'idle', running: false, duration: dur, remaining: dur });
+      set({ current: 0, running: false, remaining: sliceMinutes * 60, focusTaskId: null });
     }
   },
 
-  setDurations(workMin, breakMin) {
-    set({ workMinutes: workMin, breakMinutes: breakMin });
-    if (get().phase === 'idle') set({ duration: workMin * 60, remaining: workMin * 60 });
+  setRepeats(n) {
+    set({ repeats: Math.max(1, n) });
+  },
+
+  setSliceMinutes(m) {
+    set({ sliceMinutes: m });
+    if (get().current === 0) set({ remaining: m * 60 });
   },
 
   async refreshToday() {

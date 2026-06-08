@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useStore } from '../lib/store';
-import { isoDate, todayIso } from '../lib/dates';
+import { useStore } from '../../lib/store';
+import { isoDate, todayIso } from '../../lib/dates';
 import {
   buildHeatmap,
   computeStats,
@@ -9,15 +9,18 @@ import {
   localDay,
   MONTH_LABELS,
   type DateRange,
-} from '../lib/timeStats';
-import { cn } from '../lib/utils';
+} from '../../lib/timeStats';
+import { cn } from '../../lib/utils';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
+} from '../ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 const ALL = '__all__';
 
@@ -40,6 +43,11 @@ const LEVEL_CLASS = [
 ] as const;
 
 const DOW_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+function formatDay(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return format(new Date(y, m - 1, d), 'EEEE d MMMM yyyy', { locale: fr });
+}
 
 function resolveRange(preset: RangePreset, earliest: string): DateRange {
   const end = todayIso();
@@ -191,16 +199,24 @@ export function TimeView() {
                 <div className="flex gap-[3px]">
                   {heatmap.map((week, i) => (
                     <div key={i} className="flex flex-col gap-[3px]">
-                      {week.map((cell) => (
-                        <span
-                          key={cell.day}
-                          title={`${cell.day} · ${cell.doneCount} tâche${cell.doneCount > 1 ? 's' : ''} faite${cell.doneCount > 1 ? 's' : ''} · ${formatDuration(cell.seconds)}`}
-                          className={cn(
-                            'size-3 rounded-sm',
-                            cell.inYear ? LEVEL_CLASS[cell.level] : 'bg-transparent',
-                          )}
-                        />
-                      ))}
+                      {week.map((cell) =>
+                        cell.inYear ? (
+                          <Tooltip key={cell.day}>
+                            <TooltipTrigger asChild>
+                              <span className={cn('size-3 rounded-sm', LEVEL_CLASS[cell.level])} />
+                            </TooltipTrigger>
+                            <TooltipContent className="text-center">
+                              <div className="font-medium capitalize">{formatDay(cell.day)}</div>
+                              <div className="text-background/80">
+                                {cell.doneCount} tâche{cell.doneCount > 1 ? 's' : ''} faite
+                                {cell.doneCount > 1 ? 's' : ''} · {formatDuration(cell.seconds)}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span key={cell.day} className="size-3 rounded-sm bg-transparent" />
+                        ),
+                      )}
                     </div>
                   ))}
                 </div>

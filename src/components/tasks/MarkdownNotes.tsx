@@ -3,8 +3,8 @@ import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
-import { renderMarkdown } from '../lib/markdown';
-import { cn } from '../lib/utils';
+import { renderMarkdown } from '../../lib/markdown';
+import { cn } from '../../lib/utils';
 import './markdown.css';
 
 type Props = {

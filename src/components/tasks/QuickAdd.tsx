@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react';
-import { useStore } from '../lib/store';
-import { Kbd } from './ui/kbd';
+import { useStore } from '../../lib/store';
+import { Kbd } from '../ui/kbd';
 
 export function QuickAdd() {
   const openSpotlight = useStore((s) => s.openSpotlight);

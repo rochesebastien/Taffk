@@ -1,5 +1,5 @@
-import { useConfirm } from '../lib/confirm';
-import { cn } from '../lib/utils';
+import { useConfirm } from '../../lib/confirm';
+import { cn } from '../../lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,7 +9,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
+} from '../ui/alert-dialog';
 
 export function ConfirmDialog() {
   const open = useConfirm((s) => s.open);

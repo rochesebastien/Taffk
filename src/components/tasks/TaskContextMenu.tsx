@@ -1,9 +1,9 @@
 import { ArrowUpToLine, CalendarDays, Copy, FolderClosed, ListPlus, Play, Timer, Trash2 } from 'lucide-react';
-import { useStore } from '../lib/store';
-import { usePomodoro } from '../lib/pomodoro';
-import { confirm } from '../lib/confirm';
-import { prompt } from '../lib/prompt';
-import { addDays, ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../lib/dates';
+import { useStore } from '../../lib/store';
+import { usePomodoro } from '../../lib/pomodoro';
+import { confirm } from '../../lib/confirm';
+import { prompt } from '../../lib/prompt';
+import { addDays, ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../../lib/dates';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -15,8 +15,8 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from './ui/context-menu';
-import type { Task } from '../lib/api';
+} from '../ui/context-menu';
+import type { Task } from '../../lib/api';
 
 export function TaskContextMenu({ task, children }: { task: Task; children: React.ReactNode }) {
   const tasks = useStore((s) => s.tasks);
@@ -26,7 +26,7 @@ export function TaskContextMenu({ task, children }: { task: Task; children: Reac
   const patchTask = useStore((s) => s.patchTask);
   const moveTaskToTop = useStore((s) => s.moveTaskToTop);
   const deleteTask = useStore((s) => s.deleteTask);
-  const startWork = usePomodoro((s) => s.startWork);
+  const start = usePomodoro((s) => s.start);
 
   const isSubtask = task.parentId !== null;
   const subtasks = tasks.filter((t) => t.parentId === task.id);
@@ -75,14 +75,14 @@ export function TaskContextMenu({ task, children }: { task: Task; children: Reac
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               {subtasks.map((s) => (
-                <ContextMenuItem key={s.id} disabled={s.done} onSelect={() => startWork(s.id)}>
+                <ContextMenuItem key={s.id} disabled={s.done} onSelect={() => start(s.id)}>
                   {s.title}
                 </ContextMenuItem>
               ))}
             </ContextMenuSubContent>
           </ContextMenuSub>
         ) : (
-          <ContextMenuItem disabled={locked} onSelect={() => startWork(task.id)}>
+          <ContextMenuItem disabled={locked} onSelect={() => start(task.id)}>
             <Play /> Démarrer un focus
           </ContextMenuItem>
         )}

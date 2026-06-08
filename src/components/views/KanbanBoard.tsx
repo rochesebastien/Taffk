@@ -13,12 +13,12 @@ import {
   Tag,
   Timer,
 } from 'lucide-react';
-import { useStore } from '../lib/store';
-import { formatEstimate } from '../lib/dates';
-import { cn } from '../lib/utils';
-import { QuickAdd } from './QuickAdd';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { useStore } from '../../lib/store';
+import { formatEstimate } from '../../lib/dates';
+import { cn } from '../../lib/utils';
+import { QuickAdd } from '../tasks/QuickAdd';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +28,8 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import type { Task, TaskStatus } from '../lib/api';
+} from '../ui/dropdown-menu';
+import type { Task, TaskStatus } from '../../lib/api';
 
 const COLUMNS: { status: TaskStatus; label: string; Icon: typeof Circle; color: string }[] = [
   { status: 'todo', label: 'À faire', Icon: Circle, color: 'text-muted-foreground' },

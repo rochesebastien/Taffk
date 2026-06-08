@@ -18,6 +18,8 @@ import {
   Inbox,
   ListTodo,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   PencilLine,
   Pin,
   PinOff,
@@ -31,13 +33,15 @@ import {
 } from 'lucide-react';
 import { useStore, type View } from '../lib/store';
 import { useTheme } from '../lib/theme';
+import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
 import { confirm } from '../lib/confirm';
 import { prompt } from '../lib/prompt';
 import { todayIso } from '../lib/dates';
 import { cn } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
-import { ProjectDialog } from './ProjectDialog';
+import { ProjectDialog } from './projects/ProjectDialog';
 import { Kbd } from './ui/kbd';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import type { Project } from '../lib/api';
 import {
   DropdownMenu,
@@ -51,34 +55,47 @@ import {
 } from './ui/dropdown-menu';
 import logoDark from '../assets/logo_navbar_dark.png';
 import logoLight from '../assets/logo_navbar_light.png';
+import logoAlone from '../assets/logo_alone.png';
 
 type ProjectSort = 'default' | 'recent' | 'created' | 'updated' | 'count' | 'completion';
+
+const railBtn =
+  'group flex w-full items-center justify-center rounded-md px-2 py-2 text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground';
 
 type NavItemProps = {
   icon: LucideIcon;
   label: string;
   active: boolean;
+  collapsed: boolean;
   count?: number;
   kbd?: string;
   onClick: () => void;
 };
 
-function NavItem({ icon: Icon, label, active, count, kbd, onClick }: NavItemProps) {
-  return (
+function NavItem({ icon: Icon, label, active, collapsed, count, kbd, onClick }: NavItemProps) {
+  const button = (
     <button
       onClick={onClick}
       className={cn(
-        'group flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors',
+        'group flex w-full items-center rounded-md text-left text-sm transition-colors',
+        collapsed ? 'justify-center px-2 py-2' : 'gap-2.5 px-2.5 py-1.5',
         active
           ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
           : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
       )}
     >
       <Icon size={17} className={cn('shrink-0', active ? 'text-primary' : 'text-muted-foreground')} />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {kbd ? <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">{kbd}</Kbd> : null}
-      {count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
+      {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+      {!collapsed && kbd ? <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">{kbd}</Kbd> : null}
+      {!collapsed && count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
     </button>
+  );
+  if (!collapsed) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -105,6 +122,7 @@ function SortItem({
 
 export function Sidebar() {
   const { theme, toggle } = useTheme();
+  const { width, setWidth, collapsed, setCollapsed, toggleCollapsed } = useSidebar();
   const view = useStore((s) => s.view);
   const activeProjectId = useStore((s) => s.activeProjectId);
   const projects = useStore((s) => s.projects);
@@ -121,6 +139,24 @@ export function Sidebar() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [projectsCollapsed, setProjectsCollapsed] = useState(false);
   const [projectSort, setProjectSort] = useState<ProjectSort>('default');
+  const [dragging, setDragging] = useState(false);
+
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    setDragging(true);
+    const onMove = (ev: MouseEvent) => setWidth(ev.clientX);
+    const onUp = () => {
+      setDragging(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  }
 
   function openProjectDialog(project: Project | null) {
     setEditingProject(project);
@@ -178,19 +214,62 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground">
-      <div className="px-2 pb-4">
-        <img className="h-8 w-auto" src={theme === 'light' ? logoDark : logoLight} alt="Taffk" />
-      </div>
+    <aside
+      style={{ width: collapsed ? SIDEBAR_COLLAPSED : width }}
+      className={cn(
+        'relative flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar py-4 text-sidebar-foreground',
+        collapsed ? 'px-2' : 'px-3',
+        !dragging && 'transition-[width] duration-200 ease-out',
+      )}
+    >
+      {collapsed ? (
+        <div className="mb-2 flex flex-col items-center gap-2">
+          <img className="size-8" src={logoAlone} alt="Taffk" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={toggleCollapsed} className={railBtn} title="Déployer le menu">
+                <PanelLeftOpen size={18} className="text-muted-foreground" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Déployer le menu</TooltipContent>
+          </Tooltip>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between pb-4 pl-2 pr-1">
+          <img className="h-8 w-auto" src={theme === 'light' ? logoDark : logoLight} alt="Taffk" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggleCollapsed}
+                className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Réduire le menu</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
 
-      <button
-        onClick={openSpotlight}
-        className="group mb-1.5 flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-      >
-        <SquarePen size={17} className="shrink-0 text-primary" />
-        <span className="min-w-0 flex-1 truncate">Nouvelle tâche</span>
-        <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">Ctrl+Space</Kbd>
-      </button>
+      {collapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button onClick={openSpotlight} className={cn(railBtn, 'mb-1.5')}>
+              <SquarePen size={17} className="shrink-0 text-primary" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Nouvelle tâche</TooltipContent>
+        </Tooltip>
+      ) : (
+        <button
+          onClick={openSpotlight}
+          className="group mb-1.5 flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        >
+          <SquarePen size={17} className="shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 truncate">Nouvelle tâche</span>
+          <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">Ctrl+Space</Kbd>
+        </button>
+      )}
 
       <nav className="flex flex-col gap-0.5">
         {nav.map((n) => (
@@ -199,6 +278,7 @@ export function Sidebar() {
             icon={n.icon}
             label={n.label}
             count={n.count}
+            collapsed={collapsed}
             active={view === n.view}
             onClick={() => setView(n.view)}
           />
@@ -206,63 +286,74 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-6 flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80">
-          <button
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-colors hover:text-sidebar-foreground"
-            onClick={() => setProjectsCollapsed((c) => !c)}
-          >
-            <FolderClosed size={17} className="shrink-0 text-muted-foreground" />
-            <span className="truncate">Projets</span>
-            {projectsCollapsed ? (
-              <ChevronRight size={14} className="shrink-0 text-muted-foreground" />
-            ) : (
-              <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
-            )}
-          </button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                title="Options des projets"
-              >
-                <Ellipsis size={15} />
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => setCollapsed(false)} className={railBtn} title="Projets">
+                <FolderClosed size={17} className="text-muted-foreground" />
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2">
-                  <FolderClosed /> Organiser par
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <SortItem icon={FolderHeart} label="Projets" value="default" active={projectSort} onPick={setProjectSort} />
-                  <SortItem icon={FolderClock} label="Projets récents" value="recent" active={projectSort} onPick={setProjectSort} />
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2">
-                  <Clock /> Trier par
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <SortItem icon={CirclePlus} label="Créé" value="created" active={projectSort} onPick={setProjectSort} />
-                  <SortItem icon={PencilLine} label="Mis à jour" value="updated" active={projectSort} onPick={setProjectSort} />
-                  <SortItem icon={ListTodo} label="Nombre de tâches" value="count" active={projectSort} onPick={setProjectSort} />
-                  <SortItem icon={CircleCheck} label="Complétion" value="completion" active={projectSort} onPick={setProjectSort} />
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent side="right">Projets</TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80">
+            <button
+              className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-colors hover:text-sidebar-foreground"
+              onClick={() => setProjectsCollapsed((c) => !c)}
+            >
+              <FolderClosed size={17} className="shrink-0 text-muted-foreground" />
+              <span className="truncate">Projets</span>
+              {projectsCollapsed ? (
+                <ChevronRight size={14} className="shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
+              )}
+            </button>
 
-          <button
-            className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            title="Nouveau projet"
-            onClick={() => openProjectDialog(null)}
-          >
-            <Plus size={15} />
-          </button>
-        </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  title="Options des projets"
+                >
+                  <Ellipsis size={15} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="gap-2">
+                    <FolderClosed /> Organiser par
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <SortItem icon={FolderHeart} label="Projets" value="default" active={projectSort} onPick={setProjectSort} />
+                    <SortItem icon={FolderClock} label="Projets récents" value="recent" active={projectSort} onPick={setProjectSort} />
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="gap-2">
+                    <Clock /> Trier par
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <SortItem icon={CirclePlus} label="Créé" value="created" active={projectSort} onPick={setProjectSort} />
+                    <SortItem icon={PencilLine} label="Mis à jour" value="updated" active={projectSort} onPick={setProjectSort} />
+                    <SortItem icon={ListTodo} label="Nombre de tâches" value="count" active={projectSort} onPick={setProjectSort} />
+                    <SortItem icon={CircleCheck} label="Complétion" value="completion" active={projectSort} onPick={setProjectSort} />
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        {!projectsCollapsed && (
+            <button
+              className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              title="Nouveau projet"
+              onClick={() => openProjectDialog(null)}
+            >
+              <Plus size={15} />
+            </button>
+          </div>
+        )}
+
+        {!collapsed && !projectsCollapsed && (
           <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
             {sortedProjects.map((p) => {
               const count = top.filter((t) => !t.done && t.projectId === p.id).length;
@@ -333,11 +424,12 @@ export function Sidebar() {
         )}
 
         <nav className="mt-6 flex shrink-0 flex-col gap-0.5">
-          <NavItem icon={Search} label="Recherche" active={false} kbd="Ctrl+F" onClick={openSearch} />
+          <NavItem icon={Search} label="Recherche" active={false} collapsed={collapsed} kbd="Ctrl+F" onClick={openSearch} />
           <NavItem
             icon={Clock2}
             label="Gestion du temps"
             active={view === 'time'}
+            collapsed={collapsed}
             onClick={() => setView('time')}
           />
         </nav>
@@ -348,26 +440,50 @@ export function Sidebar() {
       <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} project={editingProject} />
 
       <div className="mt-2 flex flex-col gap-1 border-t border-sidebar-border pt-3">
-        <PomodoroWidget />
-        <button
-          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-          onClick={toggle}
-          title="Changer de thème"
-        >
-          {theme === 'dark' ? (
-            <Moon size={16} className="text-muted-foreground" />
-          ) : (
-            <Sun size={16} className="text-muted-foreground" />
-          )}
-          <span>{theme === 'dark' ? 'Sombre' : 'Clair'}</span>
-        </button>
+        <PomodoroWidget collapsed={collapsed} />
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={toggle} className={railBtn}>
+                {theme === 'dark' ? (
+                  <Moon size={16} className="text-muted-foreground" />
+                ) : (
+                  <Sun size={16} className="text-muted-foreground" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{theme === 'dark' ? 'Sombre' : 'Clair'}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+            onClick={toggle}
+            title="Changer de thème"
+          >
+            {theme === 'dark' ? (
+              <Moon size={16} className="text-muted-foreground" />
+            ) : (
+              <Sun size={16} className="text-muted-foreground" />
+            )}
+            <span>{theme === 'dark' ? 'Sombre' : 'Clair'}</span>
+          </button>
+        )}
         <NavItem
           icon={Settings}
           label="Paramètres"
           active={view === 'settings'}
+          collapsed={collapsed}
           onClick={() => setView('settings')}
         />
       </div>
+
+      {!collapsed && (
+        <div
+          onMouseDown={startResize}
+          className="absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-primary/40"
+          title="Redimensionner"
+        />
+      )}
     </aside>
   );
 }

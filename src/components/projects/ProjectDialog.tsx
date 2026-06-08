@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '../lib/store';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { useStore } from '../../lib/store';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import type { Project } from '../lib/api';
+} from '../ui/dialog';
+import type { Project } from '../../lib/api';
 
 const toHandle = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
