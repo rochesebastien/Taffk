@@ -1,4 +1,4 @@
-import type { Backend, NewTask, Project, Tag, Task, TaskPatch, TimeKind } from './api';
+import type { Backend, NewTask, Project, Tag, Task, TaskPatch, TimeEntry, TimeKind } from './api';
 
 /**
  * In-memory backend used when the app runs outside the Tauri shell (plain
@@ -14,7 +14,7 @@ const uid = () =>
 let projects: Project[] = [];
 let tags: Tag[] = [];
 let tasks: Task[] = [];
-const timeLog: { taskId: string | null; seconds: number; kind: TimeKind; at: string }[] = [];
+let timeLog: TimeEntry[] = [];
 
 function seed() {
   const createdAt = now();
@@ -49,6 +49,59 @@ function seed() {
 }
 seed();
 
+/** Back-fill realistic work/break sessions across the past ~75 days so the
+ *  time-management view has something to chart in browser preview. */
+function seedTimeEntries() {
+  const uidLocal = uid;
+  const workTasks = tasks.filter((t) => t.parentId === null);
+  let rng = 7;
+  const next = () => {
+    rng = (rng * 1103515245 + 12345) & 0x7fffffff;
+    return rng / 0x7fffffff;
+  };
+  const entries: TimeEntry[] = [];
+  for (let dayOffset = 75; dayOffset >= 0; dayOffset--) {
+    const d = new Date();
+    d.setDate(d.getDate() - dayOffset);
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) {
+      if (next() > 0.25) continue; // mostly skip weekends
+    } else if (next() > 0.8) {
+      continue; // occasional weekday off
+    }
+    const sessions = 1 + Math.floor(next() * 4);
+    for (let s = 0; s < sessions; s++) {
+      const task = workTasks[Math.floor(next() * workTasks.length)];
+      const minutes = 20 + Math.floor(next() * 50);
+      const start = new Date(d);
+      start.setHours(9 + s, Math.floor(next() * 50), 0, 0);
+      const end = new Date(start.getTime() + minutes * 60_000);
+      entries.push({
+        id: uidLocal(),
+        taskId: task?.id ?? null,
+        startedAt: start.toISOString(),
+        endedAt: end.toISOString(),
+        durationSeconds: minutes * 60,
+        kind: 'work',
+      });
+      if (next() > 0.6) {
+        const bStart = new Date(end.getTime());
+        const bMin = 5 + Math.floor(next() * 10);
+        entries.push({
+          id: uidLocal(),
+          taskId: null,
+          startedAt: bStart.toISOString(),
+          endedAt: new Date(bStart.getTime() + bMin * 60_000).toISOString(),
+          durationSeconds: bMin * 60,
+          kind: 'break',
+        });
+      }
+    }
+  }
+  timeLog = entries;
+}
+seedTimeEntries();
+
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
@@ -72,7 +125,7 @@ export const mockBackend: Backend = {
       dueDate: null,
       estimateMinutes: input.estimateMinutes ?? 0,
       spentMinutes: 0,
-      sortOrder: tasks.length,
+      sortOrder: 0,
       createdAt: ts,
       updatedAt: ts,
       completedAt: null,
@@ -157,7 +210,15 @@ export const mockBackend: Backend = {
   },
 
   async logTime(taskId: string | null, seconds: number, kind: TimeKind) {
-    timeLog.push({ taskId, seconds, kind, at: now() });
+    const ts = now();
+    timeLog.push({
+      id: uid(),
+      taskId,
+      startedAt: new Date(Date.now() - seconds * 1000).toISOString(),
+      endedAt: ts,
+      durationSeconds: seconds,
+      kind,
+    });
     if (kind === 'work' && taskId) {
       const t = tasks.find((x) => x.id === taskId);
       if (t) {
@@ -168,10 +229,13 @@ export const mockBackend: Backend = {
     }
     return null;
   },
+  async listTimeEntries() {
+    return clone(timeLog);
+  },
   async timeToday() {
     const day = today();
     return timeLog
-      .filter((e) => e.kind === 'work' && e.at.slice(0, 10) === day)
-      .reduce((sum, e) => sum + e.seconds, 0);
+      .filter((e) => e.kind === 'work' && (e.endedAt ?? e.startedAt).slice(0, 10) === day)
+      .reduce((sum, e) => sum + e.durationSeconds, 0);
   },
 };

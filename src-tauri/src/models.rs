@@ -56,6 +56,17 @@ pub struct TagDto {
     pub created_at: String,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeEntryDto {
+    pub id: String,
+    pub task_id: Option<String>,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub duration_seconds: i64,
+    pub kind: String,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewTask {

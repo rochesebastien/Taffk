@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::db::Db;
-use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch};
+use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
 
 fn map_err(e: rusqlite::Error) -> String {
     e.to_string()
@@ -111,6 +111,11 @@ pub fn log_time(
 ) -> Result<Option<TaskDto>, String> {
     db.log_time(task_id.as_deref(), seconds, &kind)
         .map_err(map_err)
+}
+
+#[tauri::command]
+pub fn list_time_entries(db: State<'_, Db>) -> Result<Vec<TimeEntryDto>, String> {
+    db.list_time_entries().map_err(map_err)
 }
 
 #[tauri::command]

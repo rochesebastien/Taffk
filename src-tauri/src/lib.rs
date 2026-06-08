@@ -40,6 +40,7 @@ pub fn run() {
             commands::create_tag,
             commands::delete_tag,
             commands::log_time,
+            commands::list_time_entries,
             commands::time_today,
         ])
         .setup(move |app| {

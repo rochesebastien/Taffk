@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus } from './api';
+import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus, type TimeEntry } from './api';
 import { isoDate } from './dates';
 
-export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'settings';
+export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'time' | 'settings';
 
 export type QuickAddParsed = {
   title: string;
@@ -34,18 +34,23 @@ type Store = {
   tasks: Task[];
   projects: Project[];
   tags: Tag[];
+  timeEntries: TimeEntry[];
   view: View;
   activeProjectId: string | null;
   selectedTaskId: string | null;
   spotlightOpen: boolean;
+  searchOpen: boolean;
   loaded: boolean;
 
   load: () => Promise<void>;
+  reloadTimeEntries: () => Promise<void>;
   setView: (view: View) => void;
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
   openSpotlight: () => void;
   closeSpotlight: () => void;
+  openSearch: () => void;
+  closeSearch: () => void;
 
   quickAdd: (
     raw: string,
@@ -84,19 +89,26 @@ export const useStore = create<Store>((set, get) => ({
   tasks: [],
   projects: [],
   tags: [],
+  timeEntries: [],
   view: 'today',
   activeProjectId: null,
   selectedTaskId: null,
   spotlightOpen: false,
+  searchOpen: false,
   loaded: false,
 
   async load() {
-    const [tasks, projects, tags] = await Promise.all([
+    const [tasks, projects, tags, timeEntries] = await Promise.all([
       api.listTasks(),
       api.listProjects(),
       api.listTags(),
+      api.listTimeEntries(),
     ]);
-    set({ tasks, projects, tags, loaded: true });
+    set({ tasks, projects, tags, timeEntries, loaded: true });
+  },
+
+  async reloadTimeEntries() {
+    set({ timeEntries: await api.listTimeEntries() });
   },
 
   setView(view) {
@@ -113,6 +125,12 @@ export const useStore = create<Store>((set, get) => ({
   },
   closeSpotlight() {
     set({ spotlightOpen: false });
+  },
+  openSearch() {
+    set({ searchOpen: true });
+  },
+  closeSearch() {
+    set({ searchOpen: false });
   },
 
   async quickAdd(raw, opts) {

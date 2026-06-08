@@ -52,6 +52,15 @@ export type Tag = {
   createdAt: string;
 };
 
+export type TimeEntry = {
+  id: string;
+  taskId: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  durationSeconds: number;
+  kind: TimeKind;
+};
+
 export type NewTask = {
   title: string;
   notes?: string;
@@ -100,6 +109,8 @@ export interface Backend {
   /** Persist a finished timer session. Returns the updated task when a work
    *  session was tied to a task (its spentMinutes is incremented), else null. */
   logTime(taskId: string | null, seconds: number, kind: TimeKind): Promise<Task | null>;
+  /** All recorded time entries (work + break), oldest first. */
+  listTimeEntries(): Promise<TimeEntry[]>;
   /** Total work seconds logged today (local date). */
   timeToday(): Promise<number>;
 }
@@ -123,6 +134,7 @@ const tauriBackend: Backend = {
   deleteTag: (id) => invoke('delete_tag', { id }),
 
   logTime: (taskId, seconds, kind) => invoke('log_time', { taskId, seconds, kind }),
+  listTimeEntries: () => invoke('list_time_entries'),
   timeToday: () => invoke('time_today'),
 };
 

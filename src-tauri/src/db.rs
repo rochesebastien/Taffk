@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 use uuid::Uuid;
 
-use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch};
+use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
 
 /// rusqlite's `Connection` is `Send` but not `Sync`, so we guard it with a
 /// `Mutex`. At this app's scale (500-2000 tasks, single user) a global lock is
@@ -332,6 +332,25 @@ impl Db {
             }
             _ => Ok(None),
         }
+    }
+
+    pub fn list_time_entries(&self) -> SqlResult<Vec<TimeEntryDto>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, task_id, started_at, ended_at, duration_seconds, kind
+             FROM time_entries ORDER BY started_at",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(TimeEntryDto {
+                id: row.get(0)?,
+                task_id: row.get(1)?,
+                started_at: row.get(2)?,
+                ended_at: row.get(3)?,
+                duration_seconds: row.get(4)?,
+                kind: row.get(5)?,
+            })
+        })?;
+        rows.collect()
     }
 
     pub fn time_today(&self) -> SqlResult<i64> {

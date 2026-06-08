@@ -9,7 +9,7 @@ import type { Task } from '../lib/api';
 
 function sortTasks(a: Task, b: Task) {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-  return a.createdAt.localeCompare(b.createdAt);
+  return b.createdAt.localeCompare(a.createdAt);
 }
 
 export function TaskListView() {

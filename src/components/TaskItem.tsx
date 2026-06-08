@@ -143,7 +143,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
               </Tooltip>
             )}
             {task.estimateMinutes > 0 && (
-              <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs leading-none text-muted-foreground/70">
+              <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[13px] text-muted-foreground/70">
                 <Timer size={13} className="shrink-0" />
                 {formatEstimate(task.estimateMinutes)}
               </span>

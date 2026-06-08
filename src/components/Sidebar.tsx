@@ -9,6 +9,7 @@ import {
   CircleCheck,
   CirclePlus,
   Clock,
+  Clock2,
   Columns3,
   Ellipsis,
   FolderClock,
@@ -21,6 +22,7 @@ import {
   Pin,
   PinOff,
   Plus,
+  Search,
   Settings,
   SquarePen,
   Sun,
@@ -57,15 +59,16 @@ type NavItemProps = {
   label: string;
   active: boolean;
   count?: number;
+  kbd?: string;
   onClick: () => void;
 };
 
-function NavItem({ icon: Icon, label, active, count, onClick }: NavItemProps) {
+function NavItem({ icon: Icon, label, active, count, kbd, onClick }: NavItemProps) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors',
+        'group flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors',
         active
           ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
           : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
@@ -73,6 +76,7 @@ function NavItem({ icon: Icon, label, active, count, onClick }: NavItemProps) {
     >
       <Icon size={17} className={cn('shrink-0', active ? 'text-primary' : 'text-muted-foreground')} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      {kbd ? <Kbd className="hidden shrink-0 px-1.5 group-hover:inline-flex">{kbd}</Kbd> : null}
       {count ? <span className="font-mono text-xs text-muted-foreground">{count}</span> : null}
     </button>
   );
@@ -108,6 +112,7 @@ export function Sidebar() {
   const setView = useStore((s) => s.setView);
   const openProject = useStore((s) => s.openProject);
   const openSpotlight = useStore((s) => s.openSpotlight);
+  const openSearch = useStore((s) => s.openSearch);
   const toggleProjectPin = useStore((s) => s.toggleProjectPin);
   const updateProject = useStore((s) => s.updateProject);
   const removeProject = useStore((s) => s.removeProject);
@@ -201,7 +206,7 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-6 flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80">
+        <div className="flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80">
           <button
             className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-colors hover:text-sidebar-foreground"
             onClick={() => setProjectsCollapsed((c) => !c)}
@@ -258,7 +263,7 @@ export function Sidebar() {
         </div>
 
         {!projectsCollapsed && (
-          <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+          <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
             {sortedProjects.map((p) => {
               const count = top.filter((t) => !t.done && t.projectId === p.id).length;
               const active = view === 'project' && activeProjectId === p.id;
@@ -326,6 +331,18 @@ export function Sidebar() {
             })}
           </div>
         )}
+
+        <nav className="mt-6 flex shrink-0 flex-col gap-0.5">
+          <NavItem icon={Search} label="Recherche" active={false} kbd="Ctrl+F" onClick={openSearch} />
+          <NavItem
+            icon={Clock2}
+            label="Gestion du temps"
+            active={view === 'time'}
+            onClick={() => setView('time')}
+          />
+        </nav>
+
+        <div className="flex-1" />
       </div>
 
       <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} project={editingProject} />
