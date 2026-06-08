@@ -44,8 +44,8 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
   it with headless Chromium (Playwright, installed ad-hoc, NOT a project dep).
   The mock is a genuine dev affordance (browser preview without the desktop shell).
 - **Commit + push after each finished task.**
-- **If foundations + extra features are done**, study SuperProductivity's main
-  features and take inspiration for further work.
+- **If foundations + extra features are done**, study comparable work managers'
+  main features and take inspiration for further work.
 
 ## Parallelism strategy
 
@@ -82,10 +82,10 @@ Running notes: decisions, gotchas, and things to remember. Newest at top of each
   primitives (numbers/strings) and assemble the object in the component body.
   `s.tasks.find(...)` is fine — it returns an existing reference.
 
-## SuperProductivity inspiration round (post-foundation)
+## Inspiration round (post-foundation)
 
-- Grounded via web search of SP's feature set. Picked the items best matching
-  the user's "keyboard-first" emphasis and SP's core, highest ROI:
+- Grounded via web search of comparable work managers' feature sets. Picked the
+  items best matching the user's "keyboard-first" emphasis and the highest ROI:
   subtasks (schema `parent_id` was ready) and keyboard navigation/shortcuts.
 - Subtasks: managed in the parent's detail drawer (list + progress bar + add);
   excluded from top-level lists/board/planner (filtered `parentId === null`);

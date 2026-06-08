@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Local-first personal work manager (SuperProductivity-style). Tauri 2 + React 19
+Local-first personal work manager. Tauri 2 + React 19
 + TypeScript. Tasks/projects/tags/focus-time persisted in a single local SQLite
 file owned by the Rust backend.
 
