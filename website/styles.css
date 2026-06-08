@@ -479,208 +479,17 @@ h3 {
   perspective: 2000px;
 }
 
-.mock {
+.mock-img {
+  display: block;
+  width: 100%;
   max-width: 1000px;
+  height: auto;
   margin-inline: auto;
   border-radius: var(--radius-xl);
-  background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
   transform: rotateX(4deg);
   transform-origin: center top;
-}
-
-.mock-bar {
-  height: 42px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-.mock-bar .dots {
-  display: flex;
-  gap: 7px;
-}
-
-.mock-bar .dots span {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--border-strong);
-}
-
-.mock-bar .dots span:nth-child(1) {
-  background: #ff5f57;
-}
-.mock-bar .dots span:nth-child(2) {
-  background: #febc2e;
-}
-.mock-bar .dots span:nth-child(3) {
-  background: #28c840;
-}
-
-.mock-bar .addr {
-  margin-inline: auto;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--text-faint);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 4px 14px;
-  border-radius: 7px;
-}
-
-.mock-body {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  min-height: 440px;
-}
-
-.mock-side {
-  border-right: 1px solid var(--border);
-  padding: 18px 14px;
-  background: var(--surface-2);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mock-side .s-label {
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-  padding: 10px 10px 6px;
-  font-weight: 600;
-}
-
-.mock-side .s-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  font-size: 0.85rem;
-  color: var(--text-soft);
-}
-
-.mock-side .s-item.active {
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 500;
-  box-shadow: var(--shadow-sm);
-}
-
-.mock-side .s-item .ic {
-  width: 15px;
-  height: 15px;
-  color: var(--brand);
-  opacity: 0.85;
-}
-
-.mock-side .s-item .badge {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  color: var(--text-faint);
-}
-
-.mock-side .s-proj {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 10px;
-  font-size: 0.82rem;
-  color: var(--text-soft);
-}
-
-.mock-side .s-proj .d {
-  width: 8px;
-  height: 8px;
-  border-radius: 3px;
-}
-
-.mock-main {
-  padding: 26px 28px;
-}
-
-.mock-main .mh {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 22px;
-}
-
-.mock-main .mh h4 {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.mock-main .mh .count {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-faint);
-}
-
-.mock-task {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 13px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
-  margin-bottom: 10px;
-  box-shadow: var(--shadow-sm);
-}
-
-.mock-task .check {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border-strong);
-  flex-shrink: 0;
-}
-
-.mock-task.done .check {
-  background: var(--brand);
-  border-color: var(--brand);
-  position: relative;
-}
-
-.mock-task.done .check::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 5px;
-  height: 9px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(43deg);
-}
-
-.mock-task .t-title {
-  font-size: 0.9rem;
-  color: var(--text);
-}
-
-.mock-task.done .t-title {
-  color: var(--text-faint);
-  text-decoration: line-through;
-}
-
-.mock-task .pills {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-  align-items: center;
 }
 
 .pill {
@@ -1594,13 +1403,7 @@ footer {
   .nav-actions .btn-ghost {
     display: none;
   }
-  .mock-body {
-    grid-template-columns: 1fr;
-  }
-  .mock-side {
-    display: none;
-  }
-  .mock {
+  .mock-img {
     transform: none;
   }
   .hero {
