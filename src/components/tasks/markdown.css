@@ -1,7 +1,7 @@
 /* Rendered markdown (dangerouslySetInnerHTML) — can't be Tailwind utilities,
    so it lives here, themed via the shadcn tokens. */
 .preview {
-  color: var(--muted-foreground);
+  color: var(--foreground);
   font-size: 13.5px;
   line-height: 1.55;
 }

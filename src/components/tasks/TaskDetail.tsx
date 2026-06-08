@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CornerLeftUp, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, CornerLeftUp, Maximize, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
 import { confirm } from '../../lib/confirm';
+import { useSettings } from '../../lib/settings';
 import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isoDate, todayIso } from '../../lib/dates';
 import { cn } from '../../lib/utils';
-import { MarkdownNotes } from './MarkdownNotes';
+import { NotesPopup } from './NotesPopup';
+import { TaskCustomProps } from './TaskCustomProps';
+import { renderMarkdown } from '../../lib/markdown';
 import { Checkbox } from '../ui/checkbox';
+import './markdown.css';
 import { Button } from '../ui/button';
 import { Calendar } from '../ui/calendar';
 import {
@@ -50,6 +54,7 @@ export function TaskDetail({ task }: Props) {
   const setTaskTags = useStore((s) => s.setTaskTags);
   const addTag = useStore((s) => s.addTag);
   const deleteTask = useStore((s) => s.deleteTask);
+  const archiveTask = useStore((s) => s.archiveTask);
   const promoteSubtask = useStore((s) => s.promoteSubtask);
   const scheduleForToday = useStore((s) => s.scheduleForToday);
   const selectTask = useStore((s) => s.selectTask);
@@ -64,12 +69,15 @@ export function TaskDetail({ task }: Props) {
   const focusTaskId = usePomodoro((s) => s.focusTaskId);
 
   const isFocusTarget = focusTaskId === task.id && current > 0;
+  const readOnly = task.archived;
+  const archivable = task.done && !task.archived;
   const locked = task.done;
 
   const [title, setTitle] = useState(task.title);
   const [tagDraft, setTagDraft] = useState('');
   const [subDraft, setSubDraft] = useState('');
   const [planOpen, setPlanOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const isSubtask = task.parentId !== null;
   const parent = isSubtask ? tasks.find((t) => t.id === task.parentId) : undefined;
@@ -114,12 +122,14 @@ export function TaskDetail({ task }: Props) {
   }
 
   async function confirmDelete() {
-    const ok = await confirm({
-      title: 'Supprimer la tâche ?',
-      description: subtasks.length > 0 ? `« ${task.title} » et ses ${subtasks.length} sous-tâches seront supprimées.` : `« ${task.title} » sera supprimée.`,
-      confirmLabel: 'Supprimer',
-      destructive: true,
-    });
+    const ok =
+      !useSettings.getState().confirmBeforeDelete ||
+      (await confirm({
+        title: 'Supprimer la tâche ?',
+        description: subtasks.length > 0 ? `« ${task.title} » et ses ${subtasks.length} sous-tâches seront supprimées.` : `« ${task.title} » sera supprimée.`,
+        confirmLabel: 'Supprimer',
+        destructive: true,
+      }));
     if (ok) void deleteTask(task.id);
   }
 
@@ -154,21 +164,46 @@ export function TaskDetail({ task }: Props) {
           >
             <PanelRightClose size={16} />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-7 p-0 text-muted-foreground hover:text-destructive"
-            title="Supprimer"
-            onClick={() => void confirmDelete()}
-          >
-            <Trash2 size={16} />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            {archivable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0 text-muted-foreground hover:text-foreground"
+                title="Archiver"
+                onClick={() => void archiveTask(task.id, true)}
+              >
+                <Archive size={16} />
+              </Button>
+            )}
+            {task.archived && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0 text-muted-foreground hover:text-foreground"
+                title="Restaurer"
+                onClick={() => void archiveTask(task.id, false)}
+              >
+                <ArchiveRestore size={16} />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="size-7 p-0 text-muted-foreground hover:text-destructive"
+              title="Supprimer"
+              onClick={() => void confirmDelete()}
+            >
+              <Trash2 size={16} />
+            </Button>
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
           <div className="flex items-start gap-3">
             <Checkbox
               checked={task.done}
+              disabled={readOnly}
               onCheckedChange={(c) => void toggleDone(task.id, c === true)}
               className="mt-1 size-[18px]"
             />
@@ -377,6 +412,8 @@ export function TaskDetail({ task }: Props) {
             )}
           </div>
 
+          <TaskCustomProps task={task} readOnly={readOnly} />
+
           {isSubtask ? (
             <div className="flex flex-col gap-2">
               <span className={SECTION_LABEL}>Tâche parent</span>
@@ -414,16 +451,18 @@ export function TaskDetail({ task }: Props) {
               <div className="flex flex-col">
                 {subtasks.map((s) => (
                   <div key={s.id} className="group/sub flex items-center gap-2.5 rounded-md px-1 py-1.5 hover:bg-accent/50">
-                    <Checkbox checked={s.done} onCheckedChange={(c) => void toggleDone(s.id, c === true)} className="size-4" />
+                    <Checkbox checked={s.done} disabled={readOnly} onCheckedChange={(c) => void toggleDone(s.id, c === true)} className="size-4" />
                     <span className={cn('min-w-0 flex-1 truncate text-sm', s.done ? 'text-muted-foreground line-through' : 'text-foreground/80')}>
                       {s.title}
                     </span>
-                    <button
-                      className="text-muted-foreground/40 opacity-0 transition hover:text-destructive group-hover/sub:opacity-100"
-                      onClick={() => void confirmDeleteSub(s)}
-                    >
-                      <X size={13} />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        className="text-muted-foreground/40 opacity-0 transition hover:text-destructive group-hover/sub:opacity-100"
+                        onClick={() => void confirmDeleteSub(s)}
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -445,10 +484,45 @@ export function TaskDetail({ task }: Props) {
             </div>
           )}
 
-          <MarkdownNotes key={task.id} initial={task.notes} onSave={(notes) => void patchTask({ id: task.id, notes })} />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className={SECTION_LABEL}>Notes</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setNotesOpen(true)}
+                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <Maximize size={15} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Ouvrir les notes</TooltipContent>
+              </Tooltip>
+            </div>
+            {task.notes.trim() ? (
+              <div
+                className="preview cursor-pointer rounded-lg border border-border bg-muted/40 px-3.5 py-3"
+                onClick={() => setNotesOpen(true)}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(task.notes) }}
+              />
+            ) : readOnly ? (
+              <div className="rounded-lg border border-dashed border-border px-3.5 py-5 text-center text-sm text-muted-foreground/50">
+                Aucune note.
+              </div>
+            ) : (
+              <button
+                onClick={() => setNotesOpen(true)}
+                className="rounded-lg border border-dashed border-border px-3.5 py-5 text-center text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+              >
+                Aucune note — cliquez pour en ajouter.
+              </button>
+            )}
+          </div>
 
           <p className="mt-auto pt-2 text-xs text-muted-foreground/60">Créé le {formatCreatedAt(task.createdAt)}</p>
         </div>
+
+        <NotesPopup task={task} open={notesOpen} onOpenChange={setNotesOpen} editable={!task.archived} />
       </aside>
   );
 }

@@ -34,7 +34,7 @@ export function TaskListView() {
 
   const visible = useMemo(() => {
     const t = todayIso();
-    let list = tasks.filter((x) => x.parentId === null);
+    let list = tasks.filter((x) => x.parentId === null && !x.archived);
     if (view === 'today') list = list.filter((x) => x.scheduledFor === t);
     else if (view === 'project') list = list.filter((x) => x.projectId === activeProjectId);
     return [...list].sort((a, b) => Number(a.done) - Number(b.done) || sortTasks(a, b));

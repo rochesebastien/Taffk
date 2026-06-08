@@ -2,6 +2,7 @@ import { ArrowUpToLine, CalendarDays, Copy, FolderClosed, ListPlus, Play, Timer,
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
 import { confirm } from '../../lib/confirm';
+import { useSettings } from '../../lib/settings';
 import { prompt } from '../../lib/prompt';
 import { addDays, ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../../lib/dates';
 import {
@@ -43,12 +44,14 @@ export function TaskContextMenu({ task, children }: { task: Task; children: Reac
   }
 
   async function confirmDelete() {
-    const ok = await confirm({
-      title: hasSubtasks ? 'Supprimer la tâche et ses sous-tâches ?' : 'Supprimer la tâche ?',
-      description: `« ${task.title} » sera supprimée.`,
-      confirmLabel: 'Supprimer',
-      destructive: true,
-    });
+    const ok =
+      !useSettings.getState().confirmBeforeDelete ||
+      (await confirm({
+        title: hasSubtasks ? 'Supprimer la tâche et ses sous-tâches ?' : 'Supprimer la tâche ?',
+        description: `« ${task.title} » sera supprimée.`,
+        confirmLabel: 'Supprimer',
+        destructive: true,
+      }));
     if (ok) void deleteTask(task.id);
   }
 

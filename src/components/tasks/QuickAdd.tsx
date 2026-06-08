@@ -7,7 +7,7 @@ export function QuickAdd() {
 
   return (
     <button
-      onClick={openSpotlight}
+      onClick={() => openSpotlight()}
       className="mx-auto flex items-center gap-2.5 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:text-foreground"
     >
       <Plus size={18} className="shrink-0" />
