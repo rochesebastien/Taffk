@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 use uuid::Uuid;
 
-use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
+use crate::models::{Backup, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
 
 /// rusqlite's `Connection` is `Send` but not `Sync`, so we guard it with a
 /// `Mutex`. At this app's scale (500-2000 tasks, single user) a global lock is
@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   scheduled_for TEXT, scheduled_time TEXT, due_date TEXT,
   estimate_minutes INTEGER NOT NULL DEFAULT 0, spent_minutes INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT,
+  custom_props TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS task_tags (
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -71,6 +72,8 @@ impl Db {
         let _ = conn.execute("ALTER TABLE tasks ADD COLUMN scheduled_time TEXT", []);
         let _ = conn.execute("ALTER TABLE projects ADD COLUMN alias TEXT", []);
         let _ = conn.execute("ALTER TABLE projects ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0", []);
+        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0", []);
+        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN custom_props TEXT NOT NULL DEFAULT '{}'", []);
         Ok(Db {
             conn: Arc::new(Mutex::new(conn)),
         })
@@ -113,6 +116,15 @@ impl Db {
         }
 
         Self::query_task(&conn, &id)
+    }
+
+    pub fn set_task_archived(&self, id: &str, archived: bool) -> SqlResult<TaskDto> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE tasks SET archived = ?1, updated_at = datetime('now') WHERE id = ?2",
+            params![archived as i64, id],
+        )?;
+        Self::query_task(&conn, id)
     }
 
     pub fn update_task(&self, patch: TaskPatch) -> SqlResult<TaskDto> {
@@ -184,6 +196,13 @@ impl Db {
                 params![v, patch.id],
             )?;
         }
+        if let Some(v) = &patch.custom_props {
+            let json = serde_json::to_string(v).unwrap_or_else(|_| "{}".into());
+            conn.execute(
+                "UPDATE tasks SET custom_props = ?1 WHERE id = ?2",
+                params![json, patch.id],
+            )?;
+        }
         if let Some(done) = patch.done {
             // Keep completed_at in sync with the done flag.
             if done {
@@ -251,7 +270,7 @@ impl Db {
     fn query_tasks(conn: &Connection, only_id: Option<&str>) -> SqlResult<Vec<TaskDto>> {
         let base = "SELECT id, title, notes, project_id, parent_id, done, status,
                 scheduled_for, due_date, estimate_minutes, spent_minutes, sort_order,
-                created_at, updated_at, completed_at, scheduled_time
+                created_at, updated_at, completed_at, scheduled_time, archived, custom_props
              FROM tasks";
 
         let map_row = |row: &rusqlite::Row| -> SqlResult<(TaskDto, String)> {
@@ -274,6 +293,8 @@ impl Db {
                     created_at: row.get(12)?,
                     updated_at: row.get(13)?,
                     completed_at: row.get(14)?,
+                    archived: row.get::<_, i64>(16)? != 0,
+                    custom_props: serde_json::from_str(&row.get::<_, String>(17)?).unwrap_or_default(),
                     tag_ids: Vec::new(),
                 },
                 id,
@@ -385,6 +406,15 @@ impl Db {
         Self::query_project(&conn, id)
     }
 
+    pub fn set_project_archived(&self, id: &str, archived: bool) -> SqlResult<ProjectDto> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE projects SET archived = ?1 WHERE id = ?2",
+            params![archived as i64, id],
+        )?;
+        Self::query_project(&conn, id)
+    }
+
     pub fn create_project(
         &self,
         name: &str,
@@ -483,6 +513,92 @@ impl Db {
             created_at: row.get(3)?,
         })
     }
+
+    // ---- data (export / import / reset) ---------------------------------
+
+    pub fn counts(&self) -> SqlResult<(i64, i64, i64, i64)> {
+        let conn = self.conn.lock().unwrap();
+        let one = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0));
+        Ok((
+            one("SELECT COUNT(*) FROM projects")?,
+            one("SELECT COUNT(*) FROM tags")?,
+            one("SELECT COUNT(*) FROM tasks")?,
+            one("SELECT COUNT(*) FROM time_entries")?,
+        ))
+    }
+
+    pub fn export_backup(&self) -> SqlResult<Backup> {
+        let exported_at = {
+            let conn = self.conn.lock().unwrap();
+            conn.query_row("SELECT datetime('now')", [], |r| r.get::<_, String>(0))?
+        };
+        Ok(Backup {
+            version: 1,
+            exported_at,
+            projects: self.list_projects()?,
+            tags: self.list_tags()?,
+            tasks: self.list_tasks()?,
+            time_entries: self.list_time_entries()?,
+        })
+    }
+
+    pub fn import_backup(&self, backup: &Backup) -> SqlResult<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+        for table in ["task_tags", "time_entries", "tasks", "projects", "tags"] {
+            tx.execute(&format!("DELETE FROM {table}"), [])?;
+        }
+        for p in &backup.projects {
+            tx.execute(
+                "INSERT INTO projects (id, name, color, alias, pinned, sort_order, archived, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![p.id, p.name, p.color, p.alias, p.pinned as i64, p.sort_order, p.archived as i64, p.created_at],
+            )?;
+        }
+        for t in &backup.tags {
+            tx.execute(
+                "INSERT INTO tags (id, name, color, created_at) VALUES (?1, ?2, ?3, ?4)",
+                params![t.id, t.name, t.color, t.created_at],
+            )?;
+        }
+        for t in &backup.tasks {
+            tx.execute(
+                "INSERT INTO tasks (id, title, notes, project_id, parent_id, done, status,
+                   scheduled_for, scheduled_time, due_date, estimate_minutes, spent_minutes,
+                   sort_order, created_at, updated_at, completed_at, archived, custom_props)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+                params![
+                    t.id, t.title, t.notes, t.project_id, t.parent_id, t.done as i64, t.status,
+                    t.scheduled_for, t.scheduled_time, t.due_date, t.estimate_minutes,
+                    t.spent_minutes, t.sort_order, t.created_at, t.updated_at, t.completed_at,
+                    t.archived as i64, serde_json::to_string(&t.custom_props).unwrap_or_else(|_| "{}".into())
+                ],
+            )?;
+            for tag_id in &t.tag_ids {
+                tx.execute(
+                    "INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)",
+                    params![t.id, tag_id],
+                )?;
+            }
+        }
+        for e in &backup.time_entries {
+            tx.execute(
+                "INSERT INTO time_entries (id, task_id, started_at, ended_at, duration_seconds, kind)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![e.id, e.task_id, e.started_at, e.ended_at, e.duration_seconds, e.kind],
+            )?;
+        }
+        tx.commit()
+    }
+
+    pub fn reset(&self) -> SqlResult<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+        for table in ["task_tags", "time_entries", "tasks", "projects", "tags"] {
+            tx.execute(&format!("DELETE FROM {table}"), [])?;
+        }
+        tx.commit()
+    }
 }
 
 #[cfg(test)]
@@ -533,6 +649,7 @@ mod tests {
             estimate_minutes: None,
             spent_minutes: None,
             sort_order: None,
+            custom_props: None,
         };
         let toggled = db.update_task(patch).unwrap();
         assert!(toggled.done);

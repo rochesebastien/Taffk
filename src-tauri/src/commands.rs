@@ -1,7 +1,7 @@
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 use crate::db::Db;
-use crate::models::{NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
+use crate::models::{Backup, DataStats, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
 
 fn map_err(e: rusqlite::Error) -> String {
     e.to_string()
@@ -25,6 +25,11 @@ pub fn update_task(patch: TaskPatch, db: State<'_, Db>) -> Result<TaskDto, Strin
 #[tauri::command]
 pub fn delete_task(id: String, db: State<'_, Db>) -> Result<(), String> {
     db.delete_task(&id).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn set_task_archived(id: String, archived: bool, db: State<'_, Db>) -> Result<TaskDto, String> {
+    db.set_task_archived(&id, archived).map_err(map_err)
 }
 
 #[tauri::command]
@@ -79,6 +84,15 @@ pub fn set_project_pinned(
 }
 
 #[tauri::command]
+pub fn set_project_archived(
+    id: String,
+    archived: bool,
+    db: State<'_, Db>,
+) -> Result<ProjectDto, String> {
+    db.set_project_archived(&id, archived).map_err(map_err)
+}
+
+#[tauri::command]
 pub fn delete_project(id: String, db: State<'_, Db>) -> Result<(), String> {
     db.delete_project(&id).map_err(map_err)
 }
@@ -121,4 +135,45 @@ pub fn list_time_entries(db: State<'_, Db>) -> Result<Vec<TimeEntryDto>, String>
 #[tauri::command]
 pub fn time_today(db: State<'_, Db>) -> Result<i64, String> {
     db.time_today().map_err(map_err)
+}
+
+fn db_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|d| d.join("taffk.db"))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn data_stats(app: AppHandle, db: State<'_, Db>) -> Result<DataStats, String> {
+    let path = db_path(&app)?;
+    let file_bytes = std::fs::metadata(&path).map(|m| m.len() as i64).unwrap_or(0);
+    let (projects, tags, tasks, time_entries) = db.counts().map_err(map_err)?;
+    Ok(DataStats {
+        path: path.to_string_lossy().into_owned(),
+        file_bytes,
+        projects,
+        tags,
+        tasks,
+        time_entries,
+    })
+}
+
+#[tauri::command]
+pub fn export_data(path: String, db: State<'_, Db>) -> Result<(), String> {
+    let backup = db.export_backup().map_err(map_err)?;
+    let json = serde_json::to_string_pretty(&backup).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_data(path: String, db: State<'_, Db>) -> Result<(), String> {
+    let json = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let backup: Backup = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    db.import_backup(&backup).map_err(map_err)
+}
+
+#[tauri::command]
+pub fn reset_data(db: State<'_, Db>) -> Result<(), String> {
+    db.reset().map_err(map_err)
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Deserialize a nullable, optional column so we can tell apart the three cases:
@@ -12,7 +14,7 @@ where
     Deserialize::deserialize(de).map(Some)
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskDto {
     pub id: String,
@@ -31,10 +33,14 @@ pub struct TaskDto {
     pub created_at: String,
     pub updated_at: String,
     pub completed_at: Option<String>,
+    #[serde(default)]
+    pub archived: bool,
+    #[serde(default)]
+    pub custom_props: HashMap<String, String>,
     pub tag_ids: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectDto {
     pub id: String,
@@ -47,7 +53,7 @@ pub struct ProjectDto {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TagDto {
     pub id: String,
@@ -56,7 +62,7 @@ pub struct TagDto {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeEntryDto {
     pub id: String,
@@ -65,6 +71,30 @@ pub struct TimeEntryDto {
     pub ended_at: Option<String>,
     pub duration_seconds: i64,
     pub kind: String,
+}
+
+/// A full snapshot of the database, used for JSON export / import.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backup {
+    pub version: u32,
+    pub exported_at: String,
+    pub projects: Vec<ProjectDto>,
+    pub tags: Vec<TagDto>,
+    pub tasks: Vec<TaskDto>,
+    pub time_entries: Vec<TimeEntryDto>,
+}
+
+/// Lightweight stats shown in the Data settings panel.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataStats {
+    pub path: String,
+    pub file_bytes: i64,
+    pub projects: i64,
+    pub tags: i64,
+    pub tasks: i64,
+    pub time_entries: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,4 +149,6 @@ pub struct TaskPatch {
     pub spent_minutes: Option<i64>,
     #[serde(default)]
     pub sort_order: Option<i64>,
+    #[serde(default)]
+    pub custom_props: Option<HashMap<String, String>>,
 }
