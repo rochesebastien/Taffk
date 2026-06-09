@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, CalendarCheck, Check, Clock, CornerDownLeft, Hash, Hourglass, Inbox, Plus, Tag as TagIcon, X } from 'lucide-react';
+import { AtSign, CalendarCheck, Check, Clock, CornerDownLeft, Hash, Hourglass, Inbox, Plus, Sunrise, Tag as TagIcon, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { parseQuickAdd, useStore } from '../../lib/store';
 import { useSettings } from '../../lib/settings';
-import { ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso } from '../../lib/dates';
+import { ESTIMATE_OPTIONS, formatEstimate, isoDate, todayIso, tomorrowIso } from '../../lib/dates';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import { Calendar } from '../ui/calendar';
@@ -112,7 +112,9 @@ export function TaskSpotlight() {
     ? 'Quand ?'
     : date === todayIso()
       ? "Aujourd'hui"
-      : parseLocalDate(date)!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      : date === tomorrowIso()
+        ? 'Demain'
+        : parseLocalDate(date)!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
   const selectedTags = tagIds.map((id) => tags.find((t) => t.id === id)).filter((t): t is NonNullable<typeof t> => Boolean(t));
 
@@ -295,6 +297,9 @@ export function TaskSpotlight() {
               <DropdownMenuContent align="start" className="w-auto p-2" onCloseAutoFocus={(e) => e.preventDefault()}>
                 <DropdownMenuItem onSelect={() => setDate(todayIso())}>
                   <CalendarCheck size={14} /> Aujourd'hui
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setDate(tomorrowIso())}>
+                  <Sunrise size={14} /> Demain
                 </DropdownMenuItem>
                 {date && (
                   <DropdownMenuItem onSelect={() => setDate(null)}>

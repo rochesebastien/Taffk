@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Archive, FolderOutput, NotepadText, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
+import { Archive, ClockAlert, FolderOutput, NotepadText, PanelRight, Pause, Play, Sun, Timer, X } from 'lucide-react';
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
-import { formatEstimate, todayIso } from '../../lib/dates';
+import { formatEstimate, formatShortDate, isOverdue, todayIso } from '../../lib/dates';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
@@ -60,6 +60,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
     .filter((t): t is Tag => Boolean(t));
 
   const isToday = task.scheduledFor === todayIso();
+  const overdue = isOverdue(task.scheduledFor, task.done);
   const canFocus = subTotal === 0 && !task.done;
   const isFocusTarget = focusTaskId === task.id && current > 0 && !task.done;
 
@@ -152,6 +153,17 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
                 <Timer size={13} className="shrink-0" />
                 {formatEstimate(task.estimateMinutes)}
               </span>
+            )}
+            {overdue && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-destructive/10 px-1.5 py-0.5 font-mono text-[13px] text-destructive">
+                    <ClockAlert size={13} className="shrink-0" />
+                    {formatShortDate(task.scheduledFor!)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Planification dépassée</TooltipContent>
+              </Tooltip>
             )}
           </>
         )}
@@ -264,7 +276,11 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
       onDragEnd={onDragEnd}
       className={cn(
         'w-full overflow-hidden rounded-xl border bg-card transition-all',
-        focused ? 'border-ring ring-1 ring-ring' : 'border-border hover:shadow-sm',
+        focused
+          ? 'border-ring ring-1 ring-ring'
+          : overdue
+            ? 'border-destructive/40 ring-1 ring-destructive/20'
+            : 'border-border hover:shadow-sm',
         task.done && 'bg-muted/40',
         draggable && 'active:cursor-grabbing',
       )}
