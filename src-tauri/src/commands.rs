@@ -1,7 +1,10 @@
 use tauri::{AppHandle, Manager, State};
 
 use crate::db::Db;
-use crate::models::{Backup, DataStats, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
+use crate::models::{
+    Backup, BackupSelection, DataStats, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch,
+    TimeEntryDto,
+};
 
 fn map_err(e: rusqlite::Error) -> String {
     e.to_string()
@@ -160,17 +163,25 @@ pub fn data_stats(app: AppHandle, db: State<'_, Db>) -> Result<DataStats, String
 }
 
 #[tauri::command]
-pub fn export_data(path: String, db: State<'_, Db>) -> Result<(), String> {
-    let backup = db.export_backup().map_err(map_err)?;
+pub fn export_data(
+    path: String,
+    selection: BackupSelection,
+    db: State<'_, Db>,
+) -> Result<(), String> {
+    let backup = db.export_backup(selection).map_err(map_err)?;
     let json = serde_json::to_string_pretty(&backup).map_err(|e| e.to_string())?;
     std::fs::write(&path, json).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn import_data(path: String, db: State<'_, Db>) -> Result<(), String> {
+pub fn import_data(
+    path: String,
+    selection: BackupSelection,
+    db: State<'_, Db>,
+) -> Result<(), String> {
     let json = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let backup: Backup = serde_json::from_str(&json).map_err(|e| e.to_string())?;
-    db.import_backup(&backup).map_err(map_err)
+    db.import_backup(&backup, selection).map_err(map_err)
 }
 
 #[tauri::command]

@@ -100,6 +100,14 @@ export type DataStats = {
   timeEntries: number;
 };
 
+/** Which entity categories an export/import covers. */
+export type BackupSelection = {
+  projects: boolean;
+  tags: boolean;
+  tasks: boolean;
+  timeEntries: boolean;
+};
+
 export interface Backend {
   listTasks(): Promise<Task[]>;
   createTask(input: NewTask): Promise<Task>;
@@ -130,10 +138,10 @@ export interface Backend {
 
   /** File path + row counts for the SQLite database. */
   dataStats(): Promise<DataStats>;
-  /** Serialize the whole DB to a JSON file at `path`. */
-  exportData(path: string): Promise<void>;
-  /** Replace the whole DB with the JSON backup at `path`. */
-  importData(path: string): Promise<void>;
+  /** Serialize the selected categories to a JSON file at `path`. */
+  exportData(path: string, selection: BackupSelection): Promise<void>;
+  /** Replace the selected categories from the JSON backup at `path`. */
+  importData(path: string, selection: BackupSelection): Promise<void>;
   /** Wipe all tasks/projects/tags/time entries. */
   resetData(): Promise<void>;
 }
@@ -163,8 +171,8 @@ const tauriBackend: Backend = {
   timeToday: () => invoke('time_today'),
 
   dataStats: () => invoke('data_stats'),
-  exportData: (path) => invoke('export_data', { path }),
-  importData: (path) => invoke('import_data', { path }),
+  exportData: (path, selection) => invoke('export_data', { path, selection }),
+  importData: (path, selection) => invoke('import_data', { path, selection }),
   resetData: () => invoke('reset_data'),
 };
 
