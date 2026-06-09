@@ -49,7 +49,7 @@ export function formatAccel(accel: string): string {
 }
 
 export const SHORTCUTS: { keys: string; label: string }[] = [
-  { keys: '1 – 5', label: 'Aujourd\'hui / Toutes / Tableau / Planning / Temps' },
+  { keys: '1 – 6', label: 'Aujourd\'hui / Toutes / Tableau / Planning / Temps / Étiquettes' },
   { keys: 'Ctrl + Space', label: 'Nouvelle tâche' },
   { keys: 'A', label: 'Nouvelle tâche' },
   { keys: 'Ctrl + F  ·  /', label: 'Recherche' },

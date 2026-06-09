@@ -126,6 +126,7 @@ export interface Backend {
 
   listTags(): Promise<Tag[]>;
   createTag(name: string, color: string | null): Promise<Tag>;
+  updateTag(id: string, name: string, color: string | null): Promise<Tag>;
   deleteTag(id: string): Promise<void>;
 
   /** Persist a finished timer session. Returns the updated task when a work
@@ -164,6 +165,7 @@ const tauriBackend: Backend = {
 
   listTags: () => invoke('list_tags'),
   createTag: (name, color) => invoke('create_tag', { name, color }),
+  updateTag: (id, name, color) => invoke('update_tag', { id, name, color }),
   deleteTag: (id) => invoke('delete_tag', { id }),
 
   logTime: (taskId, seconds, kind) => invoke('log_time', { taskId, seconds, kind }),

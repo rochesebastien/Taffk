@@ -115,6 +115,16 @@ pub fn create_tag(
 }
 
 #[tauri::command]
+pub fn update_tag(
+    id: String,
+    name: String,
+    color: Option<String>,
+    db: State<'_, Db>,
+) -> Result<TagDto, String> {
+    db.update_tag(&id, &name, color.as_deref()).map_err(map_err)
+}
+
+#[tauri::command]
 pub fn delete_tag(id: String, db: State<'_, Db>) -> Result<(), String> {
     db.delete_tag(&id).map_err(map_err)
 }

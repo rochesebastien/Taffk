@@ -501,6 +501,19 @@ impl Db {
         )
     }
 
+    pub fn update_tag(&self, id: &str, name: &str, color: Option<&str>) -> SqlResult<TagDto> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE tags SET name = ?1, color = ?2 WHERE id = ?3",
+            params![name, color, id],
+        )?;
+        conn.query_row(
+            "SELECT id, name, color, created_at FROM tags WHERE id = ?1",
+            params![id],
+            Self::map_tag,
+        )
+    }
+
     pub fn delete_tag(&self, id: &str) -> SqlResult<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM tags WHERE id = ?1", params![id])?;

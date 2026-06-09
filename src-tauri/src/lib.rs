@@ -64,6 +64,7 @@ pub fn run() {
             commands::delete_project,
             commands::list_tags,
             commands::create_tag,
+            commands::update_tag,
             commands::delete_tag,
             commands::log_time,
             commands::list_time_entries,
