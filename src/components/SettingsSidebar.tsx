@@ -10,6 +10,7 @@ import {
   MessageCircleQuestionMark,
   PanelLeftClose,
   PanelLeftOpen,
+  RefreshCw,
   Settings,
   UserRound,
   type LucideIcon,
@@ -32,6 +33,7 @@ const SECTIONS: { id: SettingsSection; icon: LucideIcon; label: string }[] = [
   { id: 'archives', icon: Archive, label: 'Archives' },
   { id: 'data', icon: Database, label: 'Données' },
   { id: 'shortcuts', icon: Command, label: 'Raccourcis clavier' },
+  { id: 'updates', icon: RefreshCw, label: 'Mises à jour' },
 ];
 
 const LINKS: { icon: LucideIcon; label: string; url: string }[] = [

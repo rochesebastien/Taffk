@@ -60,6 +60,12 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signe les artefacts de mise à jour (latest.json + .sig) pour
+          # l'updater intégré (Paramètres → Mises à jour). La clé est générée
+          # par `npm run tauri signer generate` ; sans ce secret, le build
+          # échoue car `createUpdaterArtifacts` est activé.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ steps.meta.outputs.tag }}
           releaseName: Taffk ${{ steps.meta.outputs.tag }}
@@ -76,6 +82,11 @@ jobs:
             | **Installateur** | `Taffk_*_x64-setup.exe` | Installation classique (raccourcis, désinstalleur). |
             | **Portable** | `Taffk_*_x64_portable.exe` | Aucun installateur : lancez le `.exe` directement, où vous voulez. |
             | **Code source** | *Source code* (zip / tar.gz) ci-dessous | Compiler vous-même. |
+
+            La version installée peut se mettre à jour depuis l'application :
+            **Paramètres → Mises à jour → Rechercher les mises à jour**.
+            (Les fichiers `latest.json` et `*.sig` servent à cette mise à jour
+            intégrée — pas besoin de les télécharger.)
 
       - name: Stage portable executable
         shell: pwsh

@@ -3,5 +3,12 @@
   "identifier": "default",
   "description": "Default capabilities for the main window",
   "windows": ["main"],
-  "permissions": ["core:default", "global-shortcut:default", "opener:default", "dialog:default"]
+  "permissions": [
+    "core:default",
+    "global-shortcut:default",
+    "opener:default",
+    "dialog:default",
+    "updater:default",
+    "process:default"
+  ]
 }
