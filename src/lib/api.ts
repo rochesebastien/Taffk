@@ -200,6 +200,12 @@ export async function revealPath(path: string): Promise<void> {
   await revealItemInDir(path);
 }
 
+/** Whether this build runs as the portable exe (no NSIS uninstaller next to it). */
+export async function isPortable(): Promise<boolean> {
+  if (!isTauri) return false;
+  return invoke('is_portable');
+}
+
 /** Re-register the global show/hide shortcut (no-op outside Tauri). */
 export async function setToggleShortcut(accelerator: string): Promise<void> {
   if (!isTauri) return;

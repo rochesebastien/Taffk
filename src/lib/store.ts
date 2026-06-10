@@ -12,6 +12,7 @@ export type SettingsSection =
   | 'archives'
   | 'data'
   | 'shortcuts'
+  | 'updates'
 
 export type QuickAddParsed = {
   title: string;

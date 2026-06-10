@@ -9,6 +9,17 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+/// The NSIS installer drops an `uninstall.exe` next to `taffk.exe`; the
+/// portable exe runs from an arbitrary folder without one. The portable build
+/// can't replace itself, so the frontend falls back to opening the release page.
+#[tauri::command]
+fn is_portable() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| !dir.join("uninstall.exe").exists()))
+        .unwrap_or(true)
+}
+
 /// Re-register the global show/hide shortcut from a user-chosen accelerator
 /// (e.g. `CommandOrControl+Shift+Space`). Only one global shortcut is ever
 /// registered, so the handler can toggle on any press.
@@ -34,6 +45,9 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             show_main_window(app);
         }));
+        builder = builder
+            .plugin(tauri_plugin_updater::Builder::new().build())
+            .plugin(tauri_plugin_process::init());
     }
 
     builder
@@ -74,6 +88,7 @@ pub fn run() {
             commands::import_data,
             commands::reset_data,
             set_toggle_shortcut,
+            is_portable,
         ])
         .setup(move |app| {
             let data_dir = app.path().app_data_dir()?;

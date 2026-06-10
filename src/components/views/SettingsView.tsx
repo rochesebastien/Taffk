@@ -5,6 +5,7 @@ import { AppearanceSettings } from '../settings/AppearanceSettings';
 import { ArchivesSettings } from '../settings/ArchivesSettings';
 import { DataSettings } from '../settings/DataSettings';
 import { ShortcutsSettings } from '../settings/ShortcutsSettings';
+import { UpdatesSettings } from '../settings/UpdatesSettings';
 
 const TITLES: Record<SettingsSection, string> = {
   general: 'Général',
@@ -13,6 +14,7 @@ const TITLES: Record<SettingsSection, string> = {
   archives: 'Archives',
   data: 'Données',
   shortcuts: 'Raccourcis clavier',
+  updates: 'Mises à jour',
 };
 
 function SectionContent({ section }: { section: SettingsSection }) {
@@ -29,6 +31,8 @@ function SectionContent({ section }: { section: SettingsSection }) {
       return <DataSettings />;
     case 'shortcuts':
       return <ShortcutsSettings />;
+    case 'updates':
+      return <UpdatesSettings />;
   }
 }
 
