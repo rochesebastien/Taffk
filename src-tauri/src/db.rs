@@ -4,7 +4,9 @@ use std::sync::{Arc, Mutex};
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 use uuid::Uuid;
 
-use crate::models::{Backup, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto};
+use crate::models::{
+    Backup, BackupSelection, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch, TimeEntryDto,
+};
 
 /// rusqlite's `Connection` is `Send` but not `Sync`, so we guard it with a
 /// `Mutex`. At this app's scale (500-2000 tasks, single user) a global lock is
@@ -499,6 +501,19 @@ impl Db {
         )
     }
 
+    pub fn update_tag(&self, id: &str, name: &str, color: Option<&str>) -> SqlResult<TagDto> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE tags SET name = ?1, color = ?2 WHERE id = ?3",
+            params![name, color, id],
+        )?;
+        conn.query_row(
+            "SELECT id, name, color, created_at FROM tags WHERE id = ?1",
+            params![id],
+            Self::map_tag,
+        )
+    }
+
     pub fn delete_tag(&self, id: &str) -> SqlResult<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM tags WHERE id = ?1", params![id])?;
@@ -527,7 +542,7 @@ impl Db {
         ))
     }
 
-    pub fn export_backup(&self) -> SqlResult<Backup> {
+    pub fn export_backup(&self, sel: BackupSelection) -> SqlResult<Backup> {
         let exported_at = {
             let conn = self.conn.lock().unwrap();
             conn.query_row("SELECT datetime('now')", [], |r| r.get::<_, String>(0))?
@@ -535,58 +550,91 @@ impl Db {
         Ok(Backup {
             version: 1,
             exported_at,
-            projects: self.list_projects()?,
-            tags: self.list_tags()?,
-            tasks: self.list_tasks()?,
-            time_entries: self.list_time_entries()?,
+            projects: if sel.projects { self.list_projects()? } else { Vec::new() },
+            tags: if sel.tags { self.list_tags()? } else { Vec::new() },
+            tasks: if sel.tasks { self.list_tasks()? } else { Vec::new() },
+            time_entries: if sel.time_entries { self.list_time_entries()? } else { Vec::new() },
         })
     }
 
-    pub fn import_backup(&self, backup: &Backup) -> SqlResult<()> {
+    /// Restore the selected categories from a backup, replacing each selected
+    /// category wholesale. Unselected categories are left untouched, and any
+    /// reference to a missing project/tag/task is dropped so foreign keys hold.
+    pub fn import_backup(&self, backup: &Backup, sel: BackupSelection) -> SqlResult<()> {
         let mut conn = self.conn.lock().unwrap();
         let tx = conn.transaction()?;
-        for table in ["task_tags", "time_entries", "tasks", "projects", "tags"] {
-            tx.execute(&format!("DELETE FROM {table}"), [])?;
-        }
-        for p in &backup.projects {
-            tx.execute(
-                "INSERT INTO projects (id, name, color, alias, pinned, sort_order, archived, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-                params![p.id, p.name, p.color, p.alias, p.pinned as i64, p.sort_order, p.archived as i64, p.created_at],
-            )?;
-        }
-        for t in &backup.tags {
-            tx.execute(
-                "INSERT INTO tags (id, name, color, created_at) VALUES (?1, ?2, ?3, ?4)",
-                params![t.id, t.name, t.color, t.created_at],
-            )?;
-        }
-        for t in &backup.tasks {
-            tx.execute(
-                "INSERT INTO tasks (id, title, notes, project_id, parent_id, done, status,
-                   scheduled_for, scheduled_time, due_date, estimate_minutes, spent_minutes,
-                   sort_order, created_at, updated_at, completed_at, archived, custom_props)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
-                params![
-                    t.id, t.title, t.notes, t.project_id, t.parent_id, t.done as i64, t.status,
-                    t.scheduled_for, t.scheduled_time, t.due_date, t.estimate_minutes,
-                    t.spent_minutes, t.sort_order, t.created_at, t.updated_at, t.completed_at,
-                    t.archived as i64, serde_json::to_string(&t.custom_props).unwrap_or_else(|_| "{}".into())
-                ],
-            )?;
-            for tag_id in &t.tag_ids {
+
+        let exists = |table: &str, id: &str| -> SqlResult<bool> {
+            tx.query_row(
+                &format!("SELECT 1 FROM {table} WHERE id = ?1"),
+                params![id],
+                |_| Ok(()),
+            )
+            .optional()
+            .map(|o| o.is_some())
+        };
+
+        if sel.projects {
+            tx.execute("DELETE FROM projects", [])?;
+            for p in &backup.projects {
                 tx.execute(
-                    "INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)",
-                    params![t.id, tag_id],
+                    "INSERT INTO projects (id, name, color, alias, pinned, sort_order, archived, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![p.id, p.name, p.color, p.alias, p.pinned as i64, p.sort_order, p.archived as i64, p.created_at],
                 )?;
             }
         }
-        for e in &backup.time_entries {
-            tx.execute(
-                "INSERT INTO time_entries (id, task_id, started_at, ended_at, duration_seconds, kind)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![e.id, e.task_id, e.started_at, e.ended_at, e.duration_seconds, e.kind],
-            )?;
+        if sel.tags {
+            tx.execute("DELETE FROM tags", [])?;
+            for t in &backup.tags {
+                tx.execute(
+                    "INSERT INTO tags (id, name, color, created_at) VALUES (?1, ?2, ?3, ?4)",
+                    params![t.id, t.name, t.color, t.created_at],
+                )?;
+            }
+        }
+        if sel.tasks {
+            tx.execute("DELETE FROM tasks", [])?;
+            for t in &backup.tasks {
+                let project_id = match &t.project_id {
+                    Some(pid) if exists("projects", pid)? => Some(pid.as_str()),
+                    _ => None,
+                };
+                tx.execute(
+                    "INSERT INTO tasks (id, title, notes, project_id, parent_id, done, status,
+                       scheduled_for, scheduled_time, due_date, estimate_minutes, spent_minutes,
+                       sort_order, created_at, updated_at, completed_at, archived, custom_props)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+                    params![
+                        t.id, t.title, t.notes, project_id, t.parent_id, t.done as i64, t.status,
+                        t.scheduled_for, t.scheduled_time, t.due_date, t.estimate_minutes,
+                        t.spent_minutes, t.sort_order, t.created_at, t.updated_at, t.completed_at,
+                        t.archived as i64, serde_json::to_string(&t.custom_props).unwrap_or_else(|_| "{}".into())
+                    ],
+                )?;
+                for tag_id in &t.tag_ids {
+                    if exists("tags", tag_id)? {
+                        tx.execute(
+                            "INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)",
+                            params![t.id, tag_id],
+                        )?;
+                    }
+                }
+            }
+        }
+        if sel.time_entries {
+            tx.execute("DELETE FROM time_entries", [])?;
+            for e in &backup.time_entries {
+                let task_id = match &e.task_id {
+                    Some(tid) if exists("tasks", tid)? => Some(tid.as_str()),
+                    _ => None,
+                };
+                tx.execute(
+                    "INSERT INTO time_entries (id, task_id, started_at, ended_at, duration_seconds, kind)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![e.id, task_id, e.started_at, e.ended_at, e.duration_seconds, e.kind],
+                )?;
+            }
         }
         tx.commit()
     }

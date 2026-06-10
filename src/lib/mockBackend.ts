@@ -217,6 +217,13 @@ export const mockBackend: Backend = {
     tags.push(tag);
     return clone(tag);
   },
+  async updateTag(id: string, name: string, color: string | null) {
+    const tag = tags.find((t) => t.id === id);
+    if (!tag) throw new Error('tag not found');
+    tag.name = name;
+    tag.color = color;
+    return clone(tag);
+  },
   async deleteTag(id: string) {
     tags = tags.filter((t) => t.id !== id);
     tasks.forEach((t) => {

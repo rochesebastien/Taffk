@@ -6,12 +6,14 @@ import {
   pickOpenPath,
   pickSavePath,
   revealPath,
+  type BackupSelection,
   type DataStats,
 } from '../../lib/api';
 import { useStore } from '../../lib/store';
 import { confirm } from '../../lib/confirm';
 import { Button } from '../ui/button';
 import { SettingsGroup, SettingRow } from './parts';
+import { DataTransferDialog, type TransferMode } from './DataTransferDialog';
 
 function formatBytes(n: number): string {
   if (!n) return '—';
@@ -24,40 +26,41 @@ export function DataSettings() {
   const load = useStore((s) => s.load);
   const [stats, setStats] = useState<DataStats | null>(null);
   const [busy, setBusy] = useState(false);
+  const [transfer, setTransfer] = useState<TransferMode | null>(null);
 
   const refresh = () => void api.dataStats().then(setStats).catch(() => setStats(null));
   useEffect(refresh, []);
 
-  async function onExport() {
+  async function runExport(selection: BackupSelection) {
     const date = new Date().toISOString().slice(0, 10);
     const path = await pickSavePath(`taffk-backup-${date}.json`);
     if (!path) return;
     setBusy(true);
     try {
-      await api.exportData(path);
+      await api.exportData(path, selection);
     } finally {
       setBusy(false);
+      setTransfer(null);
     }
   }
 
-  async function onImport() {
-    const ok = await confirm({
-      title: 'Importer des données ?',
-      description: 'Le contenu actuel sera entièrement remplacé par celui du fichier choisi.',
-      confirmLabel: 'Importer',
-      destructive: true,
-    });
-    if (!ok) return;
+  async function runImport(selection: BackupSelection) {
     const path = await pickOpenPath();
     if (!path) return;
     setBusy(true);
     try {
-      await api.importData(path);
+      await api.importData(path, selection);
       await load();
       refresh();
     } finally {
       setBusy(false);
+      setTransfer(null);
     }
+  }
+
+  function onConfirmTransfer(selection: BackupSelection) {
+    if (transfer === 'export') void runExport(selection);
+    else if (transfer === 'import') void runImport(selection);
   }
 
   async function onReset() {
@@ -111,13 +114,13 @@ export function DataSettings() {
       </SettingsGroup>
 
       <SettingsGroup title="Sauvegarde">
-        <SettingRow label="Exporter" description="Enregistrer toutes les données dans un fichier JSON.">
-          <Button variant="outline" size="sm" disabled={busy || !isTauri} onClick={() => void onExport()}>
+        <SettingRow label="Exporter" description="Choisir les données à enregistrer dans un fichier JSON.">
+          <Button variant="outline" size="sm" disabled={busy || !isTauri} onClick={() => setTransfer('export')}>
             <Download /> Exporter
           </Button>
         </SettingRow>
-        <SettingRow label="Importer" description="Remplacer les données par un fichier de sauvegarde.">
-          <Button variant="outline" size="sm" disabled={busy || !isTauri} onClick={() => void onImport()}>
+        <SettingRow label="Importer" description="Choisir les données à restaurer depuis une sauvegarde.">
+          <Button variant="outline" size="sm" disabled={busy || !isTauri} onClick={() => setTransfer('import')}>
             <Upload /> Importer
           </Button>
         </SettingRow>
@@ -130,6 +133,13 @@ export function DataSettings() {
           </Button>
         </SettingRow>
       </SettingsGroup>
+
+      <DataTransferDialog
+        mode={transfer}
+        busy={busy}
+        onClose={() => setTransfer(null)}
+        onConfirm={onConfirmTransfer}
+      />
     </>
   );
 }

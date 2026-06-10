@@ -85,6 +85,17 @@ pub struct Backup {
     pub time_entries: Vec<TimeEntryDto>,
 }
 
+/// Which entity categories an export/import should cover. Lets the user back up
+/// or restore a subset (e.g. tags only) from the data settings dialog.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupSelection {
+    pub projects: bool,
+    pub tags: bool,
+    pub tasks: bool,
+    pub time_entries: bool,
+}
+
 /// Lightweight stats shown in the Data settings panel.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

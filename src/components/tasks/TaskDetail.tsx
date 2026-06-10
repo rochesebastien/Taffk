@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Archive, ArchiveRestore, ArrowLeft, CornerLeftUp, Maximize, PanelRightClose, Pause, Play, Sun, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, ClockAlert, CornerLeftUp, Maximize, PanelRightClose, Pause, Play, Sun, Sunrise, Trash2, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
 import { confirm } from '../../lib/confirm';
 import { useSettings } from '../../lib/settings';
-import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isoDate, todayIso } from '../../lib/dates';
+import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isOverdue, isoDate, todayIso, tomorrowIso } from '../../lib/dates';
 import { cn } from '../../lib/utils';
 import { NotesPopup } from './NotesPopup';
 import { TaskCustomProps } from './TaskCustomProps';
@@ -90,6 +90,7 @@ export function TaskDetail({ task }: Props) {
   useEffect(() => setTitle(task.title), [task.id, task.title]);
 
   const isToday = task.scheduledFor === todayIso();
+  const isTomorrow = task.scheduledFor === tomorrowIso();
 
   const inheritedTagIds = isSubtask ? (parent?.tagIds ?? []) : [];
   const inheritedTags = inheritedTagIds.map((id) => tags.find((t) => t.id === id)).filter(Boolean);
@@ -145,11 +146,14 @@ export function TaskDetail({ task }: Props) {
 
   function planLabel() {
     if (isToday) return "Aujourd'hui";
+    if (isTomorrow) return 'Demain';
     if (task.scheduledFor) {
       return parseLocalDate(task.scheduledFor)!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
     }
     return 'Planifier';
   }
+
+  const overdue = isOverdue(task.scheduledFor, task.done);
 
   return (
     <aside className="flex w-[440px] shrink-0 flex-col overflow-hidden border-l border-border bg-background duration-200 animate-in slide-in-from-right-8">
@@ -297,8 +301,12 @@ export function TaskDetail({ task }: Props) {
             <Field label="Planification">
               <DropdownMenu open={planOpen} onOpenChange={setPlanOpen}>
                 <DropdownMenuTrigger asChild disabled={locked}>
-                  <Button variant="outline" size="sm" className={cn('gap-1.5', isToday && 'text-primary')}>
-                    {isToday && <Sun size={14} />}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn('gap-1.5', isToday && 'text-primary', overdue && 'border-destructive/40 text-destructive')}
+                  >
+                    {overdue ? <ClockAlert size={14} /> : isToday ? <Sun size={14} /> : isTomorrow ? <Sunrise size={14} /> : null}
                     {planLabel()}
                   </Button>
                 </DropdownMenuTrigger>
@@ -310,6 +318,14 @@ export function TaskDetail({ task }: Props) {
                     }}
                   >
                     <Sun size={14} /> Aujourd'hui
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void patchTask({ id: task.id, scheduledFor: tomorrowIso() });
+                      setPlanOpen(false);
+                    }}
+                  >
+                    <Sunrise size={14} /> Demain
                   </DropdownMenuItem>
                   {task.scheduledFor && (
                     <DropdownMenuItem

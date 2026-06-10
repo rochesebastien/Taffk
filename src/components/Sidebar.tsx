@@ -28,6 +28,7 @@ import {
   Search,
   Settings,
   SquarePen,
+  Tag,
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
@@ -134,6 +135,7 @@ export function Sidebar() {
   const activeProjectId = useStore((s) => s.activeProjectId);
   const projects = useStore((s) => s.projects);
   const tasks = useStore((s) => s.tasks);
+  const tags = useStore((s) => s.tags);
   const setView = useStore((s) => s.setView);
   const openSettings = useStore((s) => s.openSettings);
   const openProject = useStore((s) => s.openProject);
@@ -437,6 +439,14 @@ export function Sidebar() {
 
         <nav className="mt-6 flex shrink-0 flex-col gap-0.5">
           <NavItem icon={Search} label="Recherche" active={false} collapsed={collapsed} kbd="Ctrl+F" onClick={openSearch} />
+          <NavItem
+            icon={Tag}
+            label="Étiquettes"
+            active={view === 'tags'}
+            count={tags.length}
+            collapsed={collapsed}
+            onClick={() => setView('tags')}
+          />
           <NavItem
             icon={Clock2}
             label="Gestion du temps"

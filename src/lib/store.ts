@@ -3,7 +3,7 @@ import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus
 import { isoDate } from './dates';
 import { readSettings } from './settings';
 
-export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'time' | 'settings';
+export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'time' | 'tags' | 'settings';
 
 export type SettingsSection =
   | 'general'
@@ -58,6 +58,7 @@ type Store = {
   settingsSection: SettingsSection;
   activeProjectId: string | null;
   selectedTaskId: string | null;
+  selectedTagId: string | null;
   spotlightOpen: boolean;
   spotlightPrefill: SpotlightPrefill | null;
   searchOpen: boolean;
@@ -71,6 +72,7 @@ type Store = {
   setSettingsSection: (section: SettingsSection) => void;
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
+  selectTag: (id: string | null) => void;
   openSpotlight: (prefill?: SpotlightPrefill) => void;
   closeSpotlight: () => void;
   openSearch: () => void;
@@ -109,6 +111,8 @@ type Store = {
   archiveProject: (id: string, archived: boolean) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   addTag: (name: string, color?: string | null) => Promise<Tag>;
+  updateTag: (id: string, name: string, color: string | null) => Promise<void>;
+  removeTag: (id: string) => Promise<void>;
 };
 
 export const useStore = create<Store>((set, get) => ({
@@ -122,6 +126,7 @@ export const useStore = create<Store>((set, get) => ({
   settingsSection: 'general',
   activeProjectId: null,
   selectedTaskId: null,
+  selectedTagId: null,
   spotlightOpen: false,
   spotlightPrefill: null,
   searchOpen: false,
@@ -142,7 +147,11 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setView(view) {
-    set({ view, activeProjectId: view === 'project' ? get().activeProjectId : null });
+    set({
+      view,
+      activeProjectId: view === 'project' ? get().activeProjectId : null,
+      selectedTagId: view === 'tags' ? get().selectedTagId : null,
+    });
   },
   openSettings() {
     set({ prevView: get().view, prevProjectId: get().activeProjectId, view: 'settings' });
@@ -159,6 +168,9 @@ export const useStore = create<Store>((set, get) => ({
   },
   selectTask(id) {
     set({ selectedTaskId: id });
+  },
+  selectTag(id) {
+    set({ selectedTagId: id });
   },
   openSpotlight(prefill) {
     set({ spotlightOpen: true, spotlightPrefill: prefill ?? null });
@@ -402,6 +414,21 @@ export const useStore = create<Store>((set, get) => ({
     const tag = await api.createTag(name, color);
     set({ tags: [...get().tags, tag] });
     return tag;
+  },
+  async updateTag(id, name, color) {
+    const tag = await api.updateTag(id, name, color);
+    set({ tags: get().tags.map((t) => (t.id === id ? tag : t)) });
+  },
+  async removeTag(id) {
+    await api.deleteTag(id);
+    // Backend cascades the task_tags rows; mirror that locally.
+    set({
+      tags: get().tags.filter((t) => t.id !== id),
+      tasks: get().tasks.map((t) =>
+        t.tagIds.includes(id) ? { ...t, tagIds: t.tagIds.filter((x) => x !== id) } : t,
+      ),
+      selectedTagId: get().selectedTagId === id ? null : get().selectedTagId,
+    });
   },
 }));
 

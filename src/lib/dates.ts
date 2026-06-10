@@ -10,6 +10,22 @@ export function todayIso(): string {
   return isoDate(new Date());
 }
 
+export function tomorrowIso(): string {
+  return isoDate(addDays(new Date(), 1));
+}
+
+/** A task is overdue when its planned date is strictly in the past and it isn't done. */
+export function isOverdue(scheduledFor: string | null | undefined, done: boolean): boolean {
+  if (!scheduledFor || done) return false;
+  return scheduledFor < todayIso();
+}
+
+/** A date (`YYYY-MM-DD`) → compact `JJ/MM` label. */
+export function formatShortDate(date: string): string {
+  const [, m, d] = date.split('-');
+  return `${d}/${m}`;
+}
+
 /** Monday of the week containing `d`. */
 export function weekStart(d: Date): Date {
   const out = new Date(d);
