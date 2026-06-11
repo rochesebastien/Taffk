@@ -17,7 +17,7 @@ import { KeyboardHelp } from './components/KeyboardHelp';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useStore, type View } from './lib/store';
 import { useSettings } from './lib/settings';
-import { setToggleShortcut } from './lib/api';
+import { onRemoteDataChanged, setToggleShortcut } from './lib/api';
 import { isTypingTarget, matchesAccel } from './lib/keyboard';
 
 const VIEW_KEYS: Record<string, View> = { '1': 'today', '2': 'all', '3': 'board', '4': 'calendar', '5': 'time', '6': 'tags' };
@@ -47,6 +47,11 @@ export default function App() {
   useEffect(() => {
     void load();
     void setToggleShortcut(useSettings.getState().shortcutToggle);
+    let unlisten: (() => void) | undefined;
+    void onRemoteDataChanged(() => void load()).then((un) => {
+      unlisten = un;
+    });
+    return () => unlisten?.();
   }, [load]);
 
   useEffect(() => {

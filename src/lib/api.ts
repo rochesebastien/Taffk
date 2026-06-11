@@ -181,7 +181,59 @@ const tauriBackend: Backend = {
 export const isTauri =
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
-export const api: Backend = isTauri ? tauriBackend : mockBackend;
+/**
+ * Sticky note widgets run in their own webview window with their own store,
+ * so every write is broadcast through Tauri's event bus and each window
+ * reloads when *another* window touched the database.
+ */
+const DATA_CHANGED_EVENT = 'taffk://data-changed';
+const instanceId = Math.random().toString(36).slice(2);
+
+const MUTATING: (keyof Backend)[] = [
+  'createTask', 'updateTask', 'deleteTask', 'setTaskArchived', 'setTaskTags', 'reorderTasks',
+  'createProject', 'updateProject', 'setProjectPinned', 'setProjectArchived', 'deleteProject',
+  'createTag', 'updateTag', 'deleteTag',
+  'logTime', 'importData', 'resetData',
+];
+
+function withChangeBroadcast(backend: Backend): Backend {
+  const wrapped = { ...backend } as Record<string, (...args: unknown[]) => Promise<unknown>>;
+  for (const name of MUTATING) {
+    const fn = wrapped[name];
+    wrapped[name] = async (...args) => {
+      const result = await fn(...args);
+      void import('@tauri-apps/api/event').then(({ emit }) =>
+        emit(DATA_CHANGED_EVENT, { source: instanceId }),
+      );
+      return result;
+    };
+  }
+  return wrapped as unknown as Backend;
+}
+
+/** Run `cb` whenever another window wrote to the database. Returns an unlisten fn. */
+export async function onRemoteDataChanged(cb: () => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const { listen } = await import('@tauri-apps/api/event');
+  return listen<{ source: string }>(DATA_CHANGED_EVENT, (e) => {
+    if (e.payload.source !== instanceId) cb();
+  });
+}
+
+export const api: Backend = isTauri ? withChangeBroadcast(tauriBackend) : mockBackend;
+
+/** Open the floating "post-it" window for a task (popup window in a plain browser). */
+export async function openStickyNote(taskId: string): Promise<void> {
+  if (isTauri) {
+    await invoke('open_sticky_note', { taskId });
+  } else {
+    window.open(
+      `${window.location.pathname}?sticky=${encodeURIComponent(taskId)}`,
+      `sticky-${taskId}`,
+      'width=300,height=300',
+    );
+  }
+}
 
 /** Open a URL in the user's default browser (system shell in Tauri, new tab in a plain browser). */
 export async function openExternal(url: string): Promise<void> {

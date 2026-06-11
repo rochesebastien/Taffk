@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 use crate::db::Db;
 use crate::models::{
@@ -197,4 +197,60 @@ pub fn import_data(
 #[tauri::command]
 pub fn reset_data(db: State<'_, Db>) -> Result<(), String> {
     db.reset().map_err(map_err)
+}
+
+/// Opens (or refocuses) a small frameless "post-it" window pinned to one
+/// task. The frontend detects the `?sticky=<taskId>` query in `main.tsx` and
+/// renders the widget instead of the full app shell. On macOS the note lives
+/// on the desktop layer like a native widget; elsewhere it floats on top.
+#[tauri::command]
+pub fn open_sticky_note(app: AppHandle, task_id: String) -> Result<(), String> {
+    let label = format!("sticky-{task_id}");
+    if let Some(w) = app.get_webview_window(&label) {
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    let builder = WebviewWindowBuilder::new(
+        &app,
+        &label,
+        WebviewUrl::App(format!("index.html?sticky={task_id}").into()),
+    )
+    .title("Taffk")
+    .inner_size(300.0, 300.0)
+    .min_inner_size(220.0, 180.0)
+    .decorations(false)
+    .skip_taskbar(true);
+
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.always_on_top(true);
+
+    let _window = builder.build().map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    pin_to_desktop(&_window);
+
+    Ok(())
+}
+
+/// Drops the window onto the macOS desktop layer (above the wallpaper, below
+/// every app window — where native widgets live) and keeps it on all Spaces.
+/// Tauri has no API for window levels, so this goes through NSWindow directly.
+#[cfg(target_os = "macos")]
+fn pin_to_desktop(window: &tauri::WebviewWindow) {
+    let w = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        let Ok(ptr) = w.ns_window() else { return };
+        use objc2::msg_send;
+        use objc2::runtime::AnyObject;
+        // kCGDesktopWindowLevel + 1
+        const DESKTOP_LEVEL: isize = -2147483623 + 1;
+        // canJoinAllSpaces | stationary | ignoresCycle
+        const COLLECTION_BEHAVIOR: usize = (1 << 0) | (1 << 4) | (1 << 6);
+        let ns_window = ptr as *mut AnyObject;
+        unsafe {
+            let _: () = msg_send![ns_window, setLevel: DESKTOP_LEVEL];
+            let _: () = msg_send![ns_window, setCollectionBehavior: COLLECTION_BEHAVIOR];
+        }
+    });
 }

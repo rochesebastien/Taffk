@@ -87,6 +87,7 @@ pub fn run() {
             commands::export_data,
             commands::import_data,
             commands::reset_data,
+            commands::open_sticky_note,
             set_toggle_shortcut,
             is_portable,
         ])
@@ -105,9 +106,13 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            // Only the main window hides-on-close (tray app behavior); sticky
+            // note windows must actually close.
             if let WindowEvent::CloseRequested { api, .. } = event {
-                let _ = window.hide();
-                api.prevent_close();
+                if window.label() == "main" {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
             }
         })
         .run(tauri::generate_context!())

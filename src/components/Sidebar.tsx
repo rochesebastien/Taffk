@@ -28,6 +28,7 @@ import {
   Search,
   Settings,
   SquarePen,
+  StickyNote,
   Tag,
   Trash2,
   type LucideIcon,
@@ -39,12 +40,12 @@ import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
 import { confirm } from '../lib/confirm';
 import { prompt } from '../lib/prompt';
 import { todayIso } from '../lib/dates';
-import { cn } from '../lib/utils';
+import { cn, isMac } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
 import { ProjectDialog } from './projects/ProjectDialog';
 import { Kbd } from './ui/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import type { Project } from '../lib/api';
+import { isTauri, openStickyNote, type Project } from '../lib/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +103,58 @@ export function NavItem({ icon: Icon, label, active, collapsed, count, kbd, exte
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+// Desktop sticky notes need macOS (NSWindow desktop layer); the browser
+// preview keeps the entry visible so the widget can be developed anywhere.
+const stickyNotesAvailable = isMac || !isTauri;
+
+function StickyNotePicker({ collapsed }: { collapsed: boolean }) {
+  const tasks = useStore((s) => s.tasks);
+  const projects = useStore((s) => s.projects);
+  const today = todayIso();
+  const candidates = tasks
+    .filter((t) => !t.done && !t.archived && t.parentId === null)
+    .sort(
+      (a, b) =>
+        Number(b.scheduledFor === today) - Number(a.scheduledFor === today) ||
+        a.sortOrder - b.sortOrder,
+    );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            'group flex w-full items-center rounded-md text-left text-sm transition-colors',
+            collapsed ? 'justify-center px-2 py-2' : 'gap-2.5 px-2.5 py-1.5',
+            'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+          )}
+          title="Épingler une tâche sur le bureau"
+        >
+          <StickyNote size={17} className="shrink-0 text-muted-foreground" />
+          {!collapsed && <span className="min-w-0 flex-1 truncate">Post-it</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="end" className="max-h-80 w-64 overflow-y-auto">
+        {candidates.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucune tâche à épingler</div>
+        ) : (
+          candidates.map((t) => {
+            const project = projects.find((p) => p.id === t.projectId);
+            return (
+              <DropdownMenuItem key={t.id} onSelect={() => void openStickyNote(t.id)}>
+                <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                {project && (
+                  <span className="shrink-0 text-xs text-muted-foreground">{project.name}</span>
+                )}
+              </DropdownMenuItem>
+            );
+          })
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -454,6 +507,7 @@ export function Sidebar() {
             collapsed={collapsed}
             onClick={() => setView('time')}
           />
+          {stickyNotesAvailable && <StickyNotePicker collapsed={collapsed} />}
         </nav>
 
         <div className="flex-1" />
