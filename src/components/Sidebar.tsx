@@ -55,9 +55,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import logoDark from '../assets/logo_navbar_dark.png';
-import logoLight from '../assets/logo_navbar_light.png';
-import logoAlone from '../assets/logo_alone.png';
+import logoDark from '../assets/logo_navbar_dark.svg';
+import logoLight from '../assets/logo_navbar_light.svg';
+import logoAlone from '../assets/logo_alone.svg';
 
 type ProjectSort = 'default' | 'recent' | 'created' | 'updated' | 'count' | 'completion';
 

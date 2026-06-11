@@ -22,9 +22,9 @@ import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
 import { cn } from '../lib/utils';
 import { NavItem } from './Sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import logoDark from '../assets/logo_navbar_dark.png';
-import logoLight from '../assets/logo_navbar_light.png';
-import logoAlone from '../assets/logo_alone.png';
+import logoDark from '../assets/logo_navbar_dark.svg';
+import logoLight from '../assets/logo_navbar_light.svg';
+import logoAlone from '../assets/logo_alone.svg';
 
 const SECTIONS: { id: SettingsSection; icon: LucideIcon; label: string }[] = [
   { id: 'general', icon: Settings, label: 'Général' },
