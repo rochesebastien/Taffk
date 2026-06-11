@@ -5,10 +5,14 @@ name: Release
 # dans ce cas le tag est dérivé de la version dans `src-tauri/tauri.conf.json`
 # (ex: version 0.0.1 → release `v0.0.1`), et tauri-action crée le tag.
 #
-# La release contient trois manières de récupérer Taffk :
+# La release contient quatre manières de récupérer Taffk :
 #   - Installateur Windows   : `Taffk_<version>_x64-setup.exe` (NSIS)
 #   - Exécutable portable    : `Taffk_<version>_x64_portable.exe` (sans installateur)
+#   - Image disque macOS     : `Taffk_<version>_universal.dmg` (Intel + Apple Silicon)
 #   - Code source            : « Source code (zip / tar.gz) », ajouté par GitHub.
+#
+# Les deux jobs (Windows et macOS) publient dans la même release ;
+# tauri-action fusionne aussi leurs plateformes dans `latest.json`.
 
 on:
   push:
@@ -21,7 +25,19 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            # On ne produit que l'installateur NSIS (.exe). Le binaire portable
+            # est ajouté à l'étape suivante, et GitHub joint le code source.
+            args: --bundles nsis
+          - platform: macos-latest
+            # Binaire universel (Intel + Apple Silicon) ; le bundle `app` est
+            # nécessaire pour les artefacts de mise à jour (.app.tar.gz + .sig).
+            args: --target universal-apple-darwin --bundles app,dmg
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +63,9 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          # Cibles requises pour le binaire macOS universel ; sans effet ailleurs.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust build
         uses: swatinem/rust-cache@v2
@@ -56,14 +75,15 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build app & publish release (installateur + code source)
+      - name: Build app & publish release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Signe les artefacts de mise à jour (latest.json + .sig) pour
           # l'updater intégré (Paramètres → Mises à jour). La clé est générée
           # par `npm run tauri signer generate` ; sans ce secret, le build
-          # échoue car `createUpdaterArtifacts` est activé.
+          # échoue car `createUpdaterArtifacts` est activé. Le mot de passe
+          # doit être celui choisi à la génération de la clé.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
@@ -71,17 +91,19 @@ jobs:
           releaseName: Taffk ${{ steps.meta.outputs.tag }}
           releaseDraft: false
           prerelease: false
-          # On ne produit que l'installateur NSIS (.exe). Le binaire portable
-          # est ajouté à l'étape suivante, et GitHub joint le code source.
-          args: --bundles nsis
+          args: ${{ matrix.args }}
           releaseBody: |
             ## Télécharger Taffk
 
             | Option | Fichier | Pour qui |
             | --- | --- | --- |
-            | **Installateur** | `Taffk_*_x64-setup.exe` | Installation classique (raccourcis, désinstalleur). |
-            | **Portable** | `Taffk_*_x64_portable.exe` | Aucun installateur : lancez le `.exe` directement, où vous voulez. |
+            | **Installateur Windows** | `Taffk_*_x64-setup.exe` | Installation classique (raccourcis, désinstalleur). |
+            | **Portable Windows** | `Taffk_*_x64_portable.exe` | Aucun installateur : lancez le `.exe` directement, où vous voulez. |
+            | **macOS** | `Taffk_*_universal.dmg` | Intel et Apple Silicon. Ouvrez le `.dmg` et glissez Taffk où vous voulez. |
             | **Code source** | *Source code* (zip / tar.gz) ci-dessous | Compiler vous-même. |
+
+            > **macOS** : l'application n'est pas notariée. Au premier lancement,
+            > faites un clic droit → **Ouvrir** (ou `xattr -cr /Applications/Taffk.app`).
 
             La version installée peut se mettre à jour depuis l'application :
             **Paramètres → Mises à jour → Rechercher les mises à jour**.
@@ -89,6 +111,7 @@ jobs:
             intégrée — pas besoin de les télécharger.)
 
       - name: Stage portable executable
+        if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
           $version = '${{ steps.meta.outputs.tag }}' -replace '^v', ''
@@ -97,6 +120,7 @@ jobs:
           "PORTABLE_EXE=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Attach portable executable to the release
+        if: matrix.platform == 'windows-latest'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
