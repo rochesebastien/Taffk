@@ -8,8 +8,10 @@ import type { Backend, DataStats, NewTask, Project, Tag, Task, TaskPatch, TimeEn
 
 const now = () => new Date().toISOString();
 const today = () => new Date().toISOString().slice(0, 10);
-const uid = () =>
-  (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)) as string;
+// Deterministic ids: the sticky note preview opens a second browser window
+// with its own reseeded mock, and only identical seed ids let it find the task.
+let nextId = 0;
+const uid = () => `mock-${++nextId}`;
 
 let projects: Project[] = [];
 let tags: Tag[] = [];

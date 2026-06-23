@@ -8,8 +8,10 @@ import {
   formatNumber,
   localDay,
   MONTH_LABELS,
+  projectBreakdown,
   type DateRange,
 } from '../../lib/timeStats';
+import { ProjectPie } from './ProjectPie';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -99,6 +101,11 @@ export function TimeView() {
     [timeEntries, tasks, year, scopedProject],
   );
 
+  const breakdown = useMemo(() => {
+    const names = new Map(projects.map((p) => [p.id, p.name]));
+    return projectBreakdown(tasks, timeEntries, range, names, scopedProject);
+  }, [tasks, timeEntries, range, projects, scopedProject]);
+
   const rows: { label: string; value: string }[] = [
     { label: 'Temps passé', value: formatDuration(stats.spentSeconds) },
     { label: 'Temps estimé', value: formatDuration(stats.estimateMinutes * 60) },
@@ -168,7 +175,8 @@ export function TimeView() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-wrap gap-6">
+        <section className="min-w-[320px] flex-[2] rounded-xl border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Votre activité</h2>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -224,6 +232,17 @@ export function TimeView() {
             </div>
           </div>
         </section>
+
+        <section className="min-w-[260px] flex-1 rounded-xl border border-border bg-card p-4">
+          <h2 className="mb-4 text-sm font-semibold">Répartition du nombre de tâches par projet</h2>
+          <ProjectPie slices={breakdown.tasksByProject} format={(v) => `${v}`} />
+        </section>
+
+        <section className="min-w-[260px] flex-1 rounded-xl border border-border bg-card p-4">
+          <h2 className="mb-4 text-sm font-semibold">Répartition du temps des tâches par projet</h2>
+          <ProjectPie slices={breakdown.timeByProject} format={(v) => formatDuration(v)} />
+        </section>
+        </div>
       </div>
     </div>
   );

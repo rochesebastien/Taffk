@@ -106,7 +106,12 @@ function Distribution({ tags, counts }: { tags: Tag[]; counts: Map<string, numbe
 
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold">Distribution</h2>
+      <div className="mb-3 flex items-end justify-between gap-4">
+        <h2 className="text-sm font-semibold">Distribution</h2>
+        <span className="font-mono text-sm text-muted-foreground">
+          {tags.length} tag{tags.length > 1 ? 's' : ''}
+        </span>
+      </div>
       <div className="flex flex-col gap-2">
         {data.map(({ tag, count }) => (
           <div key={tag.id} className="flex items-center gap-3">
@@ -146,9 +151,6 @@ export function TagsView() {
     <div className="flex h-full flex-col">
       <header className="flex items-end justify-between gap-4 px-6 pb-4 pt-8">
         <h1 className="font-display text-3xl font-bold tracking-tight">Étiquettes</h1>
-        <span className="font-mono text-sm text-muted-foreground">
-          {tags.length} tag{tags.length > 1 ? 's' : ''}
-        </span>
       </header>
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-10">

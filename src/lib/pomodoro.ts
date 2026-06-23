@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { api } from './api';
 import { useStore } from './store';
 import { readSettings } from './settings';
+import { playSessionDone, playSliceDone } from './sound';
 
 const settings = readSettings();
 const DEFAULT_REPEATS = settings.pomodoroRepeats;
@@ -85,8 +86,10 @@ export const usePomodoro = create<Pomodoro>((set, get) => ({
     // Slice finished — bank the full slice and advance, or end the session.
     void logWork(focusTaskId, sliceMinutes * 60);
     if (current < repeats) {
+      playSliceDone();
       set({ current: current + 1, remaining: sliceMinutes * 60 });
     } else {
+      playSessionDone();
       set({ current: 0, running: false, remaining: sliceMinutes * 60, focusTaskId: null });
     }
   },
