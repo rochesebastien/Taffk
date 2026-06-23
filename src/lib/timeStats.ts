@@ -98,6 +98,58 @@ export function computeStats(
   };
 }
 
+export type ProjectSlice = {
+  projectId: string | null;
+  name: string;
+  value: number;
+};
+
+/**
+ * Per-project distribution within `range`, scoped to `projectId` (null = all).
+ * `tasksByProject` counts top-level tasks created in range; `timeByProject`
+ * sums work seconds. Tasks/entries without a project fall under "Sans projet".
+ * Slices are sorted by value descending, dropping empty ones.
+ */
+export function projectBreakdown(
+  tasks: Task[],
+  entries: TimeEntry[],
+  range: DateRange,
+  projectNames: Map<string, string>,
+  projectId: string | null,
+): { tasksByProject: ProjectSlice[]; timeByProject: ProjectSlice[] } {
+  const NONE = '__none__';
+  const label = (id: string | null) =>
+    id === null ? 'Sans projet' : projectNames.get(id) ?? 'Projet inconnu';
+
+  const taskCounts = new Map<string, number>();
+  for (const t of tasks) {
+    if (t.parentId !== null) continue;
+    if (!inRange(localDay(t.createdAt), range)) continue;
+    if (!taskMatches(t, projectId)) continue;
+    const key = t.projectId ?? NONE;
+    taskCounts.set(key, (taskCounts.get(key) ?? 0) + 1);
+  }
+
+  const taskById = new Map(tasks.map((t) => [t.id, t]));
+  const timeTotals = new Map<string, number>();
+  for (const e of entries) {
+    if (e.kind !== 'work') continue;
+    if (!inRange(localDay(e.startedAt), range)) continue;
+    const t = e.taskId ? taskById.get(e.taskId) : null;
+    if (projectId !== null && (!t || t.projectId !== projectId)) continue;
+    const key = t?.projectId ?? NONE;
+    timeTotals.set(key, (timeTotals.get(key) ?? 0) + e.durationSeconds);
+  }
+
+  const toSlices = (m: Map<string, number>): ProjectSlice[] =>
+    [...m.entries()]
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => ({ projectId: k === NONE ? null : k, name: label(k === NONE ? null : k), value: v }))
+      .sort((a, b) => b.value - a.value);
+
+  return { tasksByProject: toSlices(taskCounts), timeByProject: toSlices(timeTotals) };
+}
+
 export type HeatCell = {
   day: string;
   seconds: number;

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Archive, ArchiveRestore, ArrowLeft, ClockAlert, CornerLeftUp, Maximize, PanelRightClose, Pause, Play, Sun, Sunrise, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Dock, FolderOpen, ClockAlert, CornerLeftUp, Maximize, Monitor, PanelRightClose, Pause, Pin, Play, Sun, Sunrise, Trash2, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
 import { confirm } from '../../lib/confirm';
 import { useSettings } from '../../lib/settings';
 import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isOverdue, isoDate, todayIso, tomorrowIso } from '../../lib/dates';
-import { cn } from '../../lib/utils';
+import { cn, isMac } from '../../lib/utils';
 import { NotesPopup } from './NotesPopup';
 import { TaskCustomProps } from './TaskCustomProps';
 import { renderMarkdown } from '../../lib/markdown';
@@ -23,7 +23,7 @@ import {
 } from '../ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import type { Task } from '../../lib/api';
+import { isTauri, openStickyNote, type Task } from '../../lib/api';
 
 type Props = { task: Task };
 
@@ -43,6 +43,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60';
+
+// Widgets rely on NSWindow level tweaks (macOS); the browser preview keeps the
+// action visible so the feature can be developed anywhere.
+const widgetsAvailable = isMac || !isTauri;
 
 export function TaskDetail({ task }: Props) {
   const projects = useStore((s) => s.projects);
@@ -67,6 +71,7 @@ export function TaskDetail({ task }: Props) {
   const sliceMinutes = usePomodoro((s) => s.sliceMinutes);
   const running = usePomodoro((s) => s.running);
   const focusTaskId = usePomodoro((s) => s.focusTaskId);
+  const experimental = useSettings((s) => s.experimental);
 
   const isFocusTarget = focusTaskId === task.id && current > 0;
   const readOnly = task.archived;
@@ -243,7 +248,7 @@ export function TaskDetail({ task }: Props) {
                         }}
                         className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                       >
-                        <ArrowLeft size={15} />
+                        <FolderOpen size={15} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>Ouvrir le projet</TooltipContent>
@@ -534,6 +539,32 @@ export function TaskDetail({ task }: Props) {
               </button>
             )}
           </div>
+
+          {widgetsAvailable && experimental && (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className={SECTION_LABEL}>Widget</span>
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  Expérimental
+                </span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+                    <Pin size={14} /> Épingler en widget
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60">
+                  <DropdownMenuItem onClick={() => void openStickyNote(task.id, false)}>
+                    <Dock size={14} /> Au premier plan
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void openStickyNote(task.id, true)}>
+                    <Monitor size={14} /> Sur le bureau
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
 
           <p className="mt-auto pt-2 text-xs text-muted-foreground/60">Créé le {formatCreatedAt(task.createdAt)}</p>
         </div>

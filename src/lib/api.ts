@@ -222,10 +222,12 @@ export async function onRemoteDataChanged(cb: () => void): Promise<() => void> {
 
 export const api: Backend = isTauri ? withChangeBroadcast(tauriBackend) : mockBackend;
 
-/** Open the floating "post-it" window for a task (popup window in a plain browser). */
-export async function openStickyNote(taskId: string): Promise<void> {
+/** Open the widget window for a task. Floats above every app by default, or sits
+ *  at the normal window level when `onDesktop` (interactive, but covered as soon
+ *  as another app comes forward). A popup window in a plain browser. */
+export async function openStickyNote(taskId: string, onDesktop = false): Promise<void> {
   if (isTauri) {
-    await invoke('open_sticky_note', { taskId });
+    await invoke('open_sticky_note', { taskId, onDesktop });
   } else {
     window.open(
       `${window.location.pathname}?sticky=${encodeURIComponent(taskId)}`,

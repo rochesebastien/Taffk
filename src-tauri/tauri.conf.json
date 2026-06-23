@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "label": "main",
@@ -29,7 +30,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFFMkZFNTlFQTZERDE4NzgKUldSNEdOMm1udVV2SHVscVdjWmg2WTZRT1RDd096dTJINHlKVlhlYTl2NWFWTUY3dHVnMDZJOVgK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNBNzBFMzAyMTVEQjRCMzAKUldRd1M5c1ZBdU53T2pRbkdpdUVhOVMrWVRVY1NoQUJxL0dPTGZuWjkzN2t3RWJEaU9rbS8rWEcK",
       "endpoints": [
         "https://github.com/rochesebastien/Taffk/releases/latest/download/latest.json"
       ],
