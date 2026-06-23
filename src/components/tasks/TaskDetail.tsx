@@ -44,9 +44,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60';
 
-// Widgets rely on NSWindow level tweaks (macOS); the browser preview keeps the
-// action visible so the feature can be developed anywhere.
-const widgetsAvailable = isMac || !isTauri;
+// The widget itself (always-on-top, "Au premier plan") works on every desktop.
+// Only the "Sur le bureau" mode relies on NSWindow level tweaks (macOS); the
+// browser preview keeps both visible so the feature can be developed anywhere.
+const widgetsAvailable = true;
+const desktopModeAvailable = isMac || !isTauri;
 
 export function TaskDetail({ task }: Props) {
   const projects = useStore((s) => s.projects);
@@ -548,21 +550,32 @@ export function TaskDetail({ task }: Props) {
                   Expérimental
                 </span>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
-                    <Pin size={14} /> Épingler en widget
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-60">
-                  <DropdownMenuItem onClick={() => void openStickyNote(task.id, false)}>
-                    <Dock size={14} /> Au premier plan
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void openStickyNote(task.id, true)}>
-                    <Monitor size={14} /> Sur le bureau
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {desktopModeAvailable ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+                      <Pin size={14} /> Épingler en widget
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-60">
+                    <DropdownMenuItem onClick={() => void openStickyNote(task.id, false)}>
+                      <Dock size={14} /> Au premier plan
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void openStickyNote(task.id, true)}>
+                      <Monitor size={14} /> Sur le bureau
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
+                  onClick={() => void openStickyNote(task.id, false)}
+                >
+                  <Pin size={14} /> Épingler en widget
+                </Button>
+              )}
             </div>
           )}
 
