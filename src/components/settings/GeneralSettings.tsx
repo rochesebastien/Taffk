@@ -1,7 +1,11 @@
+import { Volume2 } from 'lucide-react';
 import { useSettings } from '../../lib/settings';
 import { usePomodoro } from '../../lib/pomodoro';
+import { playTestSound } from '../../lib/sound';
 import type { View } from '../../lib/store';
+import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Slider } from '../ui/slider';
 import {
   Select,
   SelectContent,
@@ -73,6 +77,34 @@ export function GeneralSettings() {
             }}
           />
         </SettingRow>
+        <SettingRow
+          label="Notification sonore"
+          description="Jouer un son à la fin de chaque cycle et de la session."
+        >
+          <Switch checked={s.pomodoroSound} onCheckedChange={(v) => s.set('pomodoroSound', v)} />
+        </SettingRow>
+        <SettingRow label="Volume" description="Volume de la notification sonore.">
+          <div className="flex items-center gap-3">
+            <Slider
+              className="w-40"
+              min={0}
+              max={100}
+              step={5}
+              disabled={!s.pomodoroSound}
+              value={[Math.round(s.pomodoroVolume * 100)]}
+              onValueChange={([v]) => s.set('pomodoroVolume', v / 100)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              title="Tester le son"
+              onClick={() => playTestSound()}
+            >
+              <Volume2 />
+            </Button>
+          </div>
+        </SettingRow>
       </SettingsGroup>
 
       <SettingsGroup title="Tâches">
@@ -91,6 +123,15 @@ export function GeneralSettings() {
       </SettingsGroup>
 
       <CustomFieldsManager />
+
+      <SettingsGroup title="Expérimental">
+        <SettingRow
+          label="Mode expérimental"
+          description="Active les fonctionnalités en cours de test, ou qui ne sont pas encore complètement stables."
+        >
+          <Switch checked={s.experimental} onCheckedChange={(v) => s.set('experimental', v)} />
+        </SettingRow>
+      </SettingsGroup>
     </>
   );
 }

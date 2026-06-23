@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 use crate::db::Db;
 use crate::models::{
@@ -197,4 +197,66 @@ pub fn import_data(
 #[tauri::command]
 pub fn reset_data(db: State<'_, Db>) -> Result<(), String> {
     db.reset().map_err(map_err)
+}
+
+/// Opens (or refocuses) a small frameless, interactive widget window for one
+/// task. The frontend detects the `?sticky=<taskId>` query in `main.tsx` and
+/// renders the widget instead of the full app shell. With `on_desktop`, the
+/// widget sits at the normal window level — interactive, but covered whenever
+/// another app comes forward, so it only shows through when nothing is on top.
+/// Otherwise it floats above every window. On macOS it follows the user across
+/// every Space in both modes.
+#[tauri::command]
+pub fn open_sticky_note(app: AppHandle, task_id: String, on_desktop: bool) -> Result<(), String> {
+    let label = format!("sticky-{task_id}");
+    if let Some(w) = app.get_webview_window(&label) {
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    let mut builder = WebviewWindowBuilder::new(
+        &app,
+        &label,
+        WebviewUrl::App(format!("index.html?sticky={task_id}").into()),
+    )
+    .title("Taffk Widget")
+    .inner_size(300.0, 300.0)
+    .min_inner_size(220.0, 180.0)
+    .decorations(false)
+    .resizable(true)
+    .transparent(true)
+    .skip_taskbar(true);
+
+    // "Premier plan" floats above every app; "Bureau" keeps the normal window
+    // level, so any app brought forward simply covers it.
+    if !on_desktop {
+        builder = builder.always_on_top(true);
+    }
+
+    let _window = builder.build().map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    follow_all_spaces(&_window);
+
+    Ok(())
+}
+
+/// Makes the widget follow the user across every Space (so it stays visible
+/// whichever desktop is active) while keeping it interactive. Only the
+/// collection behavior is tweaked here — the window level (floating vs. normal)
+/// is chosen by the builder — which AppKit exposes nowhere in Tauri.
+#[cfg(target_os = "macos")]
+fn follow_all_spaces(window: &tauri::WebviewWindow) {
+    let w = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        let Ok(ptr) = w.ns_window() else { return };
+        use objc2::msg_send;
+        use objc2::runtime::AnyObject;
+        // canJoinAllSpaces | managed (participates in normal window management)
+        const COLLECTION_BEHAVIOR: usize = (1 << 0) | (1 << 2);
+        let ns_window = ptr as *mut AnyObject;
+        unsafe {
+            let _: () = msg_send![ns_window, setCollectionBehavior: COLLECTION_BEHAVIOR];
+        }
+    });
 }

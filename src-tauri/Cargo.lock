@@ -3621,6 +3621,7 @@ dependencies = [
 name = "taffk"
 version = "0.6.0"
 dependencies = [
+ "objc2",
  "rusqlite",
  "serde",
  "serde_json",

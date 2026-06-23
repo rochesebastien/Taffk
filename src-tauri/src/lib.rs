@@ -9,15 +9,26 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-/// The NSIS installer drops an `uninstall.exe` next to `taffk.exe`; the
-/// portable exe runs from an arbitrary folder without one. The portable build
-/// can't replace itself, so the frontend falls back to opening the release page.
+/// Whether this build can't replace itself in place, so the frontend falls back
+/// to opening the release page instead of installing the update.
+///
+/// Only the Windows *portable* exe is in that situation: the NSIS installer
+/// drops an `uninstall.exe` next to `taffk.exe`, the portable exe runs from an
+/// arbitrary folder without one. Everywhere else (the macOS `.app`) the bundled
+/// updater swaps the install in place, so we always report non-portable.
 #[tauri::command]
 fn is_portable() -> bool {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(|dir| !dir.join("uninstall.exe").exists()))
-        .unwrap_or(true)
+    #[cfg(windows)]
+    {
+        std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|dir| !dir.join("uninstall.exe").exists()))
+            .unwrap_or(true)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
 }
 
 /// Re-register the global show/hide shortcut from a user-chosen accelerator
@@ -87,6 +98,7 @@ pub fn run() {
             commands::export_data,
             commands::import_data,
             commands::reset_data,
+            commands::open_sticky_note,
             set_toggle_shortcut,
             is_portable,
         ])
@@ -105,9 +117,13 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            // Only the main window hides-on-close (tray app behavior); sticky
+            // note windows must actually close.
             if let WindowEvent::CloseRequested { api, .. } = event {
-                let _ = window.hide();
-                api.prevent_close();
+                if window.label() == "main" {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
             }
         })
         .run(tauri::generate_context!())

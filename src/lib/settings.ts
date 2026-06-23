@@ -19,12 +19,15 @@ export type Settings = {
   keepSpotlightOpen: boolean;
   pomodoroSliceMinutes: number;
   pomodoroRepeats: number;
+  pomodoroSound: boolean;
+  pomodoroVolume: number;
   profileName: string;
   profileEmoji: string;
   profileColor: string;
   shortcutToggle: string;
   shortcutQuickAdd: string;
   customFields: CustomField[];
+  experimental: boolean;
 };
 
 const DEFAULTS: Settings = {
@@ -33,12 +36,15 @@ const DEFAULTS: Settings = {
   keepSpotlightOpen: true,
   pomodoroSliceMinutes: 25,
   pomodoroRepeats: 3,
+  pomodoroSound: true,
+  pomodoroVolume: 0.6,
   profileName: '',
   profileEmoji: '',
   profileColor: '#3d44ff',
   shortcutToggle: DEFAULT_TOGGLE_SHORTCUT,
   shortcutQuickAdd: 'A',
   customFields: [],
+  experimental: false,
 };
 
 export function readSettings(): Settings {
