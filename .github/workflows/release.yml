@@ -1,9 +1,12 @@
 name: Release
 
-# Publie une release GitHub quand un tag `v*` est poussé (ex: `v0.0.1`).
-# Peut aussi être lancé manuellement (Actions → Release → Run workflow) :
-# dans ce cas le tag est dérivé de la version dans `src-tauri/tauri.conf.json`
-# (ex: version 0.0.1 → release `v0.0.1`), et tauri-action crée le tag.
+# Publie une release GitHub. Trois déclencheurs :
+#   - Automatique : à chaque push sur `main`, si la version de
+#     `src-tauri/tauri.conf.json` n'a pas encore de release (= version bumpée),
+#     le tag `v<version>` est créé et la release publiée. Sinon, on ne fait rien.
+#   - Tag `v*` poussé manuellement (ex: `v0.0.1`) : release toujours.
+#   - Lancement manuel (Actions → Release → Run workflow) : le tag est dérivé de
+#     la version dans `tauri.conf.json` et tauri-action crée le tag.
 #
 # La release contient trois manières de récupérer Taffk :
 #   - Installateur Windows   : `Taffk_<version>_x64-setup.exe` (NSIS)
@@ -12,6 +15,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -20,7 +25,46 @@ permissions:
   contents: write
 
 jobs:
+  # Décide s'il faut publier. Sur un push vers `main`, on ne release que si la
+  # version de `tauri.conf.json` n'a pas encore de release (= la version vient
+  # d'être bumpée). Sur un tag `v*` ou un lancement manuel, on release toujours.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      should_release: ${{ steps.meta.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine release tag
+        id: meta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+          else
+            version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+            tag="v${version}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $tag"
+
+          if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "Release $tag existe déjà — rien à publier."
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Nouvelle version détectée — publication de $tag."
+          fi
+
   release:
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -31,19 +75,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-
-      - name: Determine release tag
-        id: meta
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            tag="${{ github.ref_name }}"
-          else
-            version=$(node -p "require('./src-tauri/tauri.conf.json').version")
-            tag="v${version}"
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Release tag: $tag"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -67,8 +98,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ steps.meta.outputs.tag }}
-          releaseName: Taffk ${{ steps.meta.outputs.tag }}
+          tagName: ${{ needs.check.outputs.tag }}
+          releaseName: Taffk ${{ needs.check.outputs.tag }}
           releaseDraft: false
           prerelease: false
           # On ne produit que l'installateur NSIS (.exe). Le binaire portable
@@ -91,7 +122,7 @@ jobs:
       - name: Stage portable executable
         shell: pwsh
         run: |
-          $version = '${{ steps.meta.outputs.tag }}' -replace '^v', ''
+          $version = '${{ needs.check.outputs.tag }}' -replace '^v', ''
           $dest = "Taffk_${version}_x64_portable.exe"
           Copy-Item 'src-tauri/target/release/taffk.exe' $dest
           "PORTABLE_EXE=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
@@ -99,6 +130,6 @@ jobs:
       - name: Attach portable executable to the release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
+          tag_name: ${{ needs.check.outputs.tag }}
           files: ${{ env.PORTABLE_EXE }}
           fail_on_unmatched_files: true
