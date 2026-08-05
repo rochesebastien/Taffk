@@ -1,182 +1,301 @@
 # DESIGN.md
 
-Visual identity for the Taffk frontend.
+Visual identity & design system for the Taffk frontend.
+
+> This document describes the **post-refonte** UI: Tailwind CSS v4 (CSS-first
+> config in `src/index.css`) + shadcn/ui (new-york style, Radix under the hood),
+> flat light/dark theme. The earlier frosted-glass / `app.css` / dark-only
+> system is gone — if you find a reference to `--bg-glow-primary`,
+> `[data-theme='light']`, or `src/app.css`, it is stale.
 
 ## Direction
 
-Refined minimal. Closer to Apple's own apps, Linear, Capacities, OpenAI's
-ChatGPT desktop than to dashboard SaaS. Restraint is the point — character
-comes from typography, spacing, and atmosphere, not from heavy chrome or
-loud animation.
+Flat, light-first, restrained. The reference points are Notion, Linear, and
+OpenAI's Codex — productivity tools, not dashboard SaaS or "AI launchpad"
+templates. Character comes from typography, spacing, and a single confident
+brand accent, not from chrome, gradients, or animation.
 
-The app reads as a tool, not a brand showcase. The single bold choice is
-an electric-blue ambient gradient (brand `#1218FC`) that anchors the dark
-canvas and gives the whole surface a soft glow.
+The app reads as a **tool**. Light is the default and the design is tuned for
+it; dark is a faithful inversion of the same layout, not a separate skin.
 
-## What we are NOT
+### What we are NOT
 
+- No frosted glass, no ambient gradient glow, no neumorphism, no skeuomorphic depth.
+- No stacked or heavy shadows. Surfaces are flat; elevation is a hairline border.
 - No Inter / Roboto / system-font default look.
-- No purple gradient on white. No "AI launchpad" template.
-- No skeuomorphic depth. No glassy buttons. No neumorphism.
-- No scattered micro-interactions (button bounces, input wiggles, etc.).
+- No scattered micro-interactions (button bounces, input wiggles).
+- No second brand hue. Blue is the only accent (with disciplined exceptions, below).
 
 ## Tokens
 
-Defined in `src/app.css`. Use the variables; never hardcode.
+All tokens live in **`src/index.css`** as CSS custom properties, exposed to
+Tailwind via `@theme inline`. Use the shadcn utility names (`bg-background`,
+`text-muted-foreground`, `border-border`, `bg-primary`…) — **never hardcode a
+color**. The palette is built on `oklch()`; the brand blue is the one literal hex.
 
-### Color
+### Color — light (`:root`, default)
 
 ```
---bg-base          #0b0b0c               page base
---bg-glow-primary  brand-blue/0.16       ambient glow, bottom-left
---bg-glow-secondary violet/0.06          ambient glow, top-right (counterweight)
-
---surface          rgba(22,22,24,0.62)   floating cards (frosted)
---surface-strong   rgba(28,28,30,0.88)   reserved for modals
---surface-hover    rgba(255,255,255,0.035)
-
---border           rgba(255,255,255,0.07)  default
---border-strong    rgba(255,255,255,0.12)  emphasis
---border-focus     rgba(61,68,255,0.5)     focused inputs
-
---text             rgba(255,255,255,0.94)
---text-dim         rgba(255,255,255,0.62)
---text-faint       rgba(255,255,255,0.38)
---text-whisper     rgba(255,255,255,0.22)
-
---accent           #3d44ff               brand blue (dark theme) — single accent
---accent-soft      rgba(61,68,255,0.16)  soft fills, focus rings, mark
+--background          oklch(1 0 0)             pure white, page base
+--foreground          oklch(0.24 0.006 285)    near-black text
+--card / --popover    oklch(1 0 0)             flat surfaces (= background)
+--secondary           oklch(0.968 …)           alt surface fills
+--muted               oklch(0.97 …)            muted backgrounds
+--muted-foreground    oklch(0.55 …)            secondary / dim text
+--accent              oklch(0.965 …)           hover/active surface tint
+--destructive         oklch(0.58 0.22 27)      red — delete / overdue only
+--border / --input    oklch(0.922 …)           hairline borders
+--primary             #1218fc                  Taffk brand blue — THE accent
+--ring                #1218fc                  focus outline (= primary)
+--sidebar*            near-white set           dedicated sidebar surface tokens
 ```
 
-Brand color is `#1218FC`. It's used verbatim in the light theme; the dark
-theme brightens it to `#3d44ff` for legibility on near-black (same pattern
-as any accent that has to read as text on the dark canvas).
+### Color — dark (`.dark`)
 
-**Single-accent rule**: brand blue only. If something needs to stand out, lean
-on text contrast or borders before introducing a second hue. Status colors
-(error red, success green) wait until a feature genuinely needs them.
+A straight inversion of the same token table — the layout and component
+classes never change, only the values:
 
-### Typography
+```
+--background   oklch(0.17 …)      very dark canvas
+--foreground   oklch(0.96 …)      off-white text
+--card         oklch(0.205 …)     raised-but-flat surface
+--muted        oklch(0.26 …)
+--border       oklch(1 0 0 / 9%)  white at 9% opacity
+--primary      #1218fc            same brand blue in both themes
+```
 
-- **UI / body**: `Geist Variable` — distinctive but restrained. Fits the
-  Apple/Linear feel without being SF or Inter.
-- **Mono**: `Geist Mono Variable` — paths, kbd, mode badge, anything that
-  reads as "data" or "code".
-- `letter-spacing: -0.005em` baseline; `-0.012em` on the search input
-  (display-sized text reads tighter).
-- `font-feature-settings: "ss01", "cv11"` — Geist's open digits and
-  alternate lowercase. Subtle but worth it.
-- Avoid bold on body text; weight range is **350 / 400 / 500**.
+**Single-accent rule.** Brand blue `#1218fc` is the only hue used decoratively.
+If something needs to stand out, reach for text contrast, weight, or a border
+before introducing a second color. Unlike the old dark-only system, the blue is
+**not** brightened in dark mode — `#1218fc` is used verbatim in both themes.
+
+### Disciplined exceptions to single-accent
+
+These exist on purpose; don't add more without a design discussion:
+
+- `--destructive` (red) — delete actions and the overdue-task badge/ring.
+- `text-emerald-500` / `bg-emerald-500` — the "Done" / completion signal
+  (Kanban done column icon, subtask progress bar). Green = finished.
+- **`ProjectPie` / Time view** — a deliberate 10-color categorical palette
+  (cyan, orange, green, red, purple, pink, teal, slate, …). Data viz needs
+  distinguishable slices; the single-accent rule does not apply to charts.
 
 ### Radii
 
+`--radius: 0.625rem` (10px) is the base; the scale derives from it.
+
 ```
---radius-card    14px   floating surfaces
---radius-pill    6px    badges, kbd
-items inside cards  10px (slightly less than the card)
+--radius-sm   6px   badges, kbd, small chips
+--radius-md   8px   inputs, code blocks
+--radius-lg   10px  default
+--radius-xl   14px  cards, columns, drop zones
 ```
+
+In practice: cards/columns use `rounded-xl`, task & kanban cards `rounded-lg`,
+small inline elements `rounded-md`/`rounded-sm`.
 
 ### Shadow
 
-One shadow recipe for every floating surface:
-
-```
-0 1px 0 rgba(255,255,255,0.04) inset,    /* top edge highlight */
-0 24px 60px -20px rgba(0,0,0,0.55)        /* long, soft drop */
-```
-
-Don't stack multiple shadows. Don't introduce harder shadows.
+Effectively none. Flat surfaces sit on a `border`. The only shadow is a
+**subtle `hover:shadow-sm`** on draggable cards to signal grab-ability. Do not
+stack shadows or introduce harder drops — elevation is communicated by borders
+and background tint (`bg-muted/30`, `bg-accent`), not depth.
 
 ### Spacing rhythm
 
-Loose, but consistent.
+Tailwind's scale, used consistently:
 
-- 24px gutter on the shell
-- 8px between bar and results
-- 14px / 18px paddings inside cards
-- 16px above the hint footer
-- `14vh` top margin on the shell — leaves headroom; not vertically centered.
+- `gap-0.5` between nav items · `gap-1.5` inline · `gap-2.5`–`gap-3` groups · `gap-4`+ page-level
+- Cards: `px-3 py-2.5` compact · detail panel `px-5`
+- Page padding: `px-6 pt-8 pb-*` standard across views
+- Scroll pattern: `min-h-0 flex-1 overflow-y-auto` for every scrollable main area
+
+## Typography
+
+Three variable fonts, loaded via `@fontsource-variable/*` in `index.css`:
+
+- **Display** — `Bricolage Grotesque Variable` (`font-display`). View titles only:
+  `font-display text-3xl font-bold tracking-tight`.
+- **Body / UI** — `Geist Variable` (`font-sans`). Distinctive but restrained;
+  not SF, not Inter. Base **15px**, `letter-spacing: -0.005em`.
+- **Mono** — `Geist Mono Variable` (`font-mono`). Counts, time values (`MM:SS`),
+  kbd, code, anything that reads as "data".
+
+Details that matter:
+
+- `font-feature-settings: 'ss01', 'cv11'` — Geist's open digits & alternate
+  lowercase, applied on `body`.
+- Anti-aliasing: `-webkit-font-smoothing: antialiased`, `-moz-osx-font-smoothing: grayscale`.
+- Section labels: `text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60`.
+- Field labels: `text-[13px] text-muted-foreground`.
+- Task body: `text-[15px] leading-snug`. Avoid bold on body text.
 
 ## Theme
 
-Two themes share the same accent and the same component layout — only
-the token table swaps.
+Light is default. `lib/theme.ts` (`useThemeStore`, Zustand) toggles the `.dark`
+class on `<html>` — shadcn convention. Four modes:
 
-- **Dark** (default): `#0b0b0c` base, brand-blue ambient glow, frosted
-  surfaces over near-black. Accent brightened to `#3d44ff`.
-- **Light** (`[data-theme='light']`): cool off-white `#f4f5fb` base, the
-  same blue radial glow at lower opacity, white frosted surfaces with a
-  shorter softer drop shadow, accent set to the exact brand `#1218fc`.
+- **light** / **dark** — explicit.
+- **system** — follows the OS `prefers-color-scheme`.
+- **schedule** — dark between `scheduleStart` (default `20:00`) and
+  `scheduleEnd` (`08:00`); re-evaluated every 30s.
 
-Toggling lives in the sidebar foot. State persists in `localStorage`
-under `taffk.theme`. CodeMirror still ships oneDark in both themes —
-swapping editor themes alongside the body theme is a known gap.
+Persisted in `localStorage`: `taffk.theme.mode`, `taffk.theme.scheduleStart`,
+`taffk.theme.scheduleEnd`. Configured in **Settings → Appearance** (a 4-up
+button grid; active = `border-primary bg-primary/5`).
+
+> **Known gap:** CodeMirror / the notes editor does not yet swap its editor
+> theme alongside the body theme. Rendered markdown (`.preview`) and the rest of
+> the UI are fully themed via tokens.
 
 ## Layout
 
-Full-window app shell — a fixed sidebar plus a swappable main view:
+Full-window app shell — a **resizable sidebar** + a swappable main view, plus
+overlays. Root: `flex h-screen w-screen overflow-hidden bg-background text-foreground`.
 
 ```
-┌──────────┬───────────────────────────────────┐
-│ Sidebar  │  Main view (Today / All / Project  │
-│ 244 px   │   / Board / Planning)              │
-│          │                                    │
-│ nav      │   ┌─ list-header ───────────────┐  │
-│ projects │   │ quick-add                   │  │
-│          │   │ tasks…                      │  │
-│ pomodoro │   └─────────────────────────────┘  │
-│ theme    │                                    │
-└──────────┴───────────────────────────────────┘
-        + task detail drawer (right overlay)
+┌────────────┬─────────────────────────────────────┐
+│ Sidebar    │  Main view                          │
+│ (resizable │   ┌─ header (font-display title) ─┐  │
+│  ~280px,   │   │ quick-add / view content      │  │
+│  collapses │   │ scrollable area               │  │
+│  to ~52px) │   └───────────────────────────────┘  │
+│            │                                       │
+│ pomodoro   │                                       │
+│ profile    │                                       │
+└────────────┴─────────────────────────────────────┘
+   + Task detail panel (right, w-440px, slide-in)
+   + Spotlight overlays (search / new-task, centered modal)
+   + Sticky-note windows (separate frameless Tauri windows)
 ```
 
-The sidebar (frosted on `--sidebar-bg`) holds the brand mark, the view nav
-(Today / All / Board / Planning), the project list (with create), then a foot
-with the Pomodoro widget and the theme toggle. The main area renders one view
-at a time inside a single frosted card. Selecting a task opens the detail
-drawer as a right-side overlay with a dimmed backdrop (`Esc` closes it).
+- **Sidebar** is its own surface (`bg-sidebar` token set). A drag handle on its
+  right edge resizes it (min ~240px); it collapses to a ~52px icon rail. Width
+  state in `lib/sidebar.ts`.
+- **Main** (`flex min-w-0 flex-1 flex-col overflow-hidden`) renders exactly one
+  view. Each view opens with a header: `h1.font-display.text-3xl.font-bold` +
+  optional `text-muted-foreground/70` subtitle, then a `min-h-0 flex-1 overflow-y-auto` body.
+- **Settings** swaps the whole shell for its own sidebar (`SettingsSidebar`) +
+  settings view, same resizable/collapsible behavior.
 
-Theme toggle lives in the sidebar foot; state persists in `localStorage` under
-`taffk.theme`. CodeMirror still ships oneDark in both themes — a known gap.
+## Components & views
 
-## Components
+### Sidebar (`Sidebar.tsx`)
 
-- **`.app-shell`** — `grid-template-columns: 244px 1fr`, `100vh`.
-- **Sidebar** — `.nav-item` (with `.active` accent fill), `.project-dot`,
-  `.sidebar-section` (projects), `.sidebar-foot` (Pomodoro + theme).
-- **Main views** — `.list-view` / `.board-view` / `.cal-view` are the frosted
-  card; each opens with a `.list-header` (title + stats).
-- **`.quick-add`** — input row with a `+`, focus-within accent border. Parses
-  `#tag` and `@projet`.
-- **`.task-item`** — checkbox (`.task-check`, accent when done), title, meta
-  (project dot, `#tags`, estimate, notes flag), hover actions.
-- **`.task-detail` drawer** — `.detail-drawer` over `.detail-backdrop`; fields,
-  tag chips, and `.notes` (CodeMirror + markdown-it preview, Write/Aperçu tabs).
-- **`.board-col` / `.board-card`** — Kanban columns and draggable cards; columns
-  light up on drag-over (accent-soft).
-- **`.cal-day` / `.cal-card`** — planner day columns (today gets an accent
-  border) and compact draggable cards; `.cal-backlog` is the unscheduled row.
-- **`.pomo`** — sidebar focus timer: idle start button, or active state with
-  mono `MM:SS`, progress bar, controls, and today's total.
-- **`.view-tabs`** — the Write/Aperçu toggle reused inside the notes editor.
+Brand mark → **Quick Add** button (`SquarePen`, `text-primary`) → nav (Today /
+All / Board / Calendar, each with a count + `kbd` hint) → collapsible **Projects**
+section (with a sort dropdown) → Search / Tags / Time nav → foot: Pomodoro
+widget, profile (emoji + name), Settings.
+
+- Active item: `bg-sidebar-accent font-medium text-sidebar-accent-foreground`,
+  icon `text-primary`.
+- Hover: `bg-sidebar-accent/60`.
+
+### Task list (`TaskListView.tsx` / `TaskItem.tsx`)
+
+Open tasks grouped above completed ("N en cours" / "N complétées"); rows drag
+between groups. Keyboard: `j`/`k` navigate, `x` toggle done, `Enter` open detail.
+
+A task card: `rounded-xl border bg-card px-3 py-2.5`, `text-[15px] leading-snug`
+— checkbox + inline-editable title + meta badges (project pill with folder icon,
+`#tag` `variant="secondary"` badges, estimate) + hover action buttons
+(`opacity-0 group-hover:opacity-100`: pomodoro play, schedule-today, notes, archive).
+
+- Focused: `border-ring ring-1 ring-ring`.
+- Overdue: `border-destructive/40 ring-1 ring-destructive/20` + `ClockAlert` badge.
+- Done: `bg-muted/40`, title struck through and muted.
+
+### Quick-add & spotlights
+
+- **QuickAdd** parses `#tag` and `@projet` inline as you type.
+- **TaskSpotlight** (new-task modal) — title + date/time/estimate pickers, with
+  autocomplete chips for `#tag` / `@project` (suggests creating when no match).
+- **SearchSpotlight** (Cmd/Ctrl+F) — input + ranked results (title > project/tag >
+  notes), match highlighted with `bg-primary/20`; icons per match type.
+
+### Task detail (`TaskDetail.tsx`)
+
+Right-side panel, `w-[440px]`, `animate-in slide-in-from-right-8`. Stacked
+fields (`flex flex-col gap-5`): title textarea, project, estimate, schedule
+(with date-picker calendar), time-spent (primary pomodoro button), tags
+(inherited = dashed border, own = solid), subtasks (progress bar `bg-emerald-500`,
+collapsible), notes (markdown preview / editor), created timestamp.
+
+### Kanban (`KanbanBoard.tsx`)
+
+Three columns (`rounded-xl border bg-muted/30`); drag-over lights the column
+`border-ring bg-accent`. Cards: `rounded-lg border bg-card px-3 py-2.5`,
+`cursor-grab`, `hover:shadow-sm`. Status icons — Todo `text-muted-foreground`,
+In-Progress `text-primary`, Done `text-emerald-500`.
+
+### Calendar (`CalendarView.tsx` + `calendar-theme.css`)
+
+`react-big-calendar` + drag-drop addon, Month/Week/Day via a `ButtonGroup`.
+Themed entirely through tokens: flat `var(--border)` grid at `--radius-lg`,
+today cell a 6% primary tint, current-time line 2px primary, events filled
+`var(--primary)` with a darker 3px left border and white text, done events
+`opacity .55` + strikethrough.
+
+### Time / data views
+
+- **TimeView** — totals, a 7×52 activity heatmap (`bg-primary` at 5 opacity
+  steps), and a project pie. **TagsView** — editable tag rows + inline color
+  picker. **ProjectPie** — custom SVG donut, 10-color categorical palette.
+
+### Pomodoro (`PomodoroWidget.tsx`)
+
+Lives in the sidebar foot. Big primary play button (`bg-primary`, `size-14`,
+`rounded-2xl`, `hover:scale-[1.03] active:scale-95`) + `MM:SS` mono timer,
+progress, and today's total; collapses to an icon button. Repeat count (1–6)
+and slice length (15–60 min) via dropdowns.
+
+### Sticky note (`StickyNoteWindow.tsx`)
+
+A separate **frameless, always-on-top Tauri window** pinning one task.
+`rounded-[5%] border bg-card`, a primary-blue draggable header
+(`data-tauri-drag-region`), task body, SE resize grip; window background is
+transparent so the rounded corners reveal the desktop.
+
+## shadcn/ui primitives
+
+Generated into `components/ui/` (new-york style). Present: `button`,
+`button-group`*, `input`, `select`, `checkbox`, `switch`, `slider`, `calendar`,
+`dialog`, `alert-dialog`, `sheet`, `dropdown-menu`, `context-menu`, `tooltip`,
+`progress`, `badge`, `separator`, `scroll-area`, `kbd`*.
+
+`button-group` and `kbd` are the notable custom-ish additions. Add new
+primitives with `npx shadcn@latest add <name>` — don't hand-roll what shadcn
+ships.
+
+## CSS files (the only non-Tailwind styling)
+
+Four `.css` files; everything else is Tailwind utilities + tokens.
+
+- **`src/index.css`** — the source of truth: Tailwind entry, `@theme` tokens,
+  `:root` / `.dark` palettes, fonts, base layer.
+- **`components/tasks/markdown.css`** (`.preview`) — rendered-markdown prose
+  (13.5px, headings, code, blockquotes with a primary left-border, tables,
+  mermaid, kbd). Fully token-themed, no hardcoded colors.
+- **`components/tasks/notes-editor.css`** — TipTap/ProseMirror editor: task-list
+  checkboxes (`accent-color: var(--primary)`), done = muted + strikethrough,
+  muted placeholder.
+- **`components/views/calendar-theme.css`** — `react-big-calendar` overrides
+  (see Calendar, above).
 
 ## Animation principles
 
-- One entrance animation on the shell. No per-item stagger (yet).
-- All hover/focus transitions are **120–200ms, ease**.
-- No springy / bouncy easings. Cubic-bezier(0.2, 0.8, 0.2, 1) for entrance,
-  ease for state changes.
-- Reserve elaborate motion for moments of genuine delight (first run,
-  command-execution feedback). Never decorate.
+- Entrance: `animate-in` (e.g. detail panel `slide-in-from-right-8`). No
+  per-item stagger.
+- Hover/focus transitions ~120–200ms, `ease`. No springy/bouncy easings.
+- The one playful touch is the pomodoro button's `hover:scale` / `active:scale`.
+  Reserve motion for genuine feedback; never decorate.
 
 ## When to break the rules
 
-If you're adding a feature the current system can't express:
+If the current system can't express a new feature:
 
-- prefer **adding a new token** to redefining an existing one
-- prefer **adding a component** to overloading an existing one
-- prefer **extending** the radii / spacing scale to one-off values
-- never duplicate the blue/violet gradient — it is the canvas signature
-
-If you find yourself reaching for a green checkmark or a red error blob,
-stop and propose a token in the design discussion before adding it.
+- prefer **adding a token** to redefining an existing one;
+- prefer **adding a shadcn component** to overloading an existing one;
+- prefer **extending** the radius / spacing scale to a one-off value;
+- if you reach for a new hue (beyond blue, destructive-red, done-green, or the
+  chart palette), **stop and propose a token** in the design discussion first.
