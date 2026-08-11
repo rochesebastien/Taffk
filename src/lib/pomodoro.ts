@@ -26,6 +26,8 @@ type Pomodoro = {
   repeats: number;
   focusTaskId: string | null;
   todaySeconds: number;
+  focusOpen: boolean;
+  strictFocus: boolean;
 
   toggle: () => void;
   start: (taskId?: string | null) => void;
@@ -36,6 +38,9 @@ type Pomodoro = {
   setRepeats: (n: number) => void;
   setSliceMinutes: (m: number) => void;
   refreshToday: () => Promise<void>;
+  openFocus: () => void;
+  closeFocus: () => void;
+  toggleStrictFocus: () => void;
 };
 
 export const usePomodoro = create<Pomodoro>((set, get) => ({
@@ -46,6 +51,8 @@ export const usePomodoro = create<Pomodoro>((set, get) => ({
   repeats: DEFAULT_REPEATS,
   focusTaskId: null,
   todaySeconds: 0,
+  focusOpen: false,
+  strictFocus: false,
 
   toggle() {
     const { current, running, sliceMinutes } = get();
@@ -71,7 +78,10 @@ export const usePomodoro = create<Pomodoro>((set, get) => ({
   },
 
   reset() {
-    const { current, sliceMinutes, remaining, focusTaskId } = get();
+    const { current, sliceMinutes, remaining, focusTaskId, strictFocus } = get();
+    // Réinitialiser ramènerait `current` à 0, ce qui lèverait le verrou : c'est la porte de sortie
+    // que Concentration Max est censée fermer.
+    if (strictFocus && current > 0) return;
     if (current > 0) void logWork(focusTaskId, sliceMinutes * 60 - remaining);
     set({ current: 0, running: false, remaining: sliceMinutes * 60, focusTaskId: null });
   },
@@ -109,5 +119,21 @@ export const usePomodoro = create<Pomodoro>((set, get) => ({
     } catch {
       /* ignore */
     }
+  },
+
+  openFocus() {
+    set({ focusOpen: true });
+  },
+
+  closeFocus() {
+    const { strictFocus, current } = get();
+    if (strictFocus && current > 0) return;
+    set({ focusOpen: false });
+  },
+
+  toggleStrictFocus() {
+    const { strictFocus, current } = get();
+    if (strictFocus && current > 0) return;
+    set({ strictFocus: !strictFocus });
   },
 }));
