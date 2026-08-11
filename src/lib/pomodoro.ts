@@ -26,6 +26,7 @@ type Pomodoro = {
   repeats: number;
   focusTaskId: string | null;
   todaySeconds: number;
+  focusOpen: boolean;
 
   toggle: () => void;
   start: (taskId?: string | null) => void;
@@ -36,6 +37,8 @@ type Pomodoro = {
   setRepeats: (n: number) => void;
   setSliceMinutes: (m: number) => void;
   refreshToday: () => Promise<void>;
+  openFocus: () => void;
+  closeFocus: () => void;
 };
 
 export const usePomodoro = create<Pomodoro>((set, get) => ({
@@ -46,6 +49,7 @@ export const usePomodoro = create<Pomodoro>((set, get) => ({
   repeats: DEFAULT_REPEATS,
   focusTaskId: null,
   todaySeconds: 0,
+  focusOpen: false,
 
   toggle() {
     const { current, running, sliceMinutes } = get();
@@ -109,5 +113,13 @@ export const usePomodoro = create<Pomodoro>((set, get) => ({
     } catch {
       /* ignore */
     }
+  },
+
+  openFocus() {
+    set({ focusOpen: true });
+  },
+
+  closeFocus() {
+    set({ focusOpen: false });
   },
 }));
