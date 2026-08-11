@@ -16,6 +16,7 @@ import { PromptDialog } from './components/dialog/PromptDialog';
 import { KeyboardHelp } from './components/KeyboardHelp';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useStore, type View } from './lib/store';
+import { usePomodoro } from './lib/pomodoro';
 import { useSettings } from './lib/settings';
 import { onRemoteDataChanged, setToggleShortcut } from './lib/api';
 import { isTypingTarget, matchesAccel } from './lib/keyboard';
@@ -41,6 +42,7 @@ export default function App() {
   const closeSearch = useStore((s) => s.closeSearch);
 
   const quickAddShortcut = useSettings((s) => s.shortcutQuickAdd);
+  const focusLocked = usePomodoro((s) => s.strictFocus && s.current > 0);
 
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -56,6 +58,9 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Concentration Max : la dialog focus bloque la souris, mais les raccourcis globaux
+      // continueraient de changer de vue ou d'ouvrir un spotlight par-dessus.
+      if (focusLocked) return;
       if (e.key === 'Escape') {
         if (helpOpen) setHelpOpen(false);
         else if (searchOpen) closeSearch();
@@ -92,7 +97,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [helpOpen, searchOpen, closeSearch, selectedTaskId, selectTask, selectedTagId, selectTag, view, closeSettings, setView, openSpotlight, openSearch, quickAddShortcut]);
+  }, [helpOpen, searchOpen, closeSearch, selectedTaskId, selectTask, selectedTagId, selectTag, view, closeSettings, setView, openSpotlight, openSearch, quickAddShortcut, focusLocked]);
 
   return (
     <TooltipProvider delayDuration={300}>

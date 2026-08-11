@@ -1,4 +1,4 @@
-import { Check, Hourglass, Pause, PanelRight, Play, Repeat1, Settings, TimerReset } from 'lucide-react';
+import { Check, Hourglass, Lock, Pause, PanelRight, Play, Repeat1, Settings, TimerReset } from 'lucide-react';
 import { usePomodoro } from '../lib/pomodoro';
 import { useStore } from '../lib/store';
 import { todayIso } from '../lib/dates';
@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -39,6 +40,8 @@ export function FocusModeDialog() {
   const reset = usePomodoro((s) => s.reset);
   const setRepeats = usePomodoro((s) => s.setRepeats);
   const setSliceMinutes = usePomodoro((s) => s.setSliceMinutes);
+  const strictFocus = usePomodoro((s) => s.strictFocus);
+  const toggleStrictFocus = usePomodoro((s) => s.toggleStrictFocus);
 
   const tasks = useStore((s) => s.tasks);
   const toggleDone = useStore((s) => s.toggleDone);
@@ -50,6 +53,7 @@ export function FocusModeDialog() {
 
   const sliceSeconds = sliceMinutes * 60;
   const elapsedRatio = current === 0 ? 0 : Math.min(1, Math.max(0, (sliceSeconds - remaining) / sliceSeconds));
+  const locked = strictFocus && current > 0;
 
   function openDetail(id: string) {
     selectTask(id);
@@ -58,8 +62,24 @@ export function FocusModeDialog() {
 
   return (
     <Dialog open={focusOpen} onOpenChange={(open) => !open && closeFocus()}>
-      <DialogContent className="gap-0 rounded-3xl bg-background p-8 sm:max-w-3xl md:p-10">
+      <DialogContent
+        showCloseButton={!locked}
+        onEscapeKeyDown={(e) => locked && e.preventDefault()}
+        onInteractOutside={(e) => locked && e.preventDefault()}
+        className="gap-0 rounded-3xl bg-background p-8 sm:max-w-3xl md:p-10"
+      >
         <DialogTitle className="sr-only">Mode Focus</DialogTitle>
+
+        {locked && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="absolute right-4 top-4 grid size-7 place-items-center rounded-md text-muted-foreground">
+                <Lock size={16} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>Concentration Max : la session doit aller à son terme</TooltipContent>
+          </Tooltip>
+        )}
 
         <div className="flex gap-1.5">
           {Array.from({ length: repeats }, (_, i) => {
@@ -129,7 +149,8 @@ export function FocusModeDialog() {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => openDetail(t.id)}
-                        className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        disabled={locked}
+                        className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                       >
                         <PanelRight size={16} />
                       </button>
@@ -146,7 +167,7 @@ export function FocusModeDialog() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => reset()}
-                  disabled={current === 0}
+                  disabled={current === 0 || locked}
                   className="grid size-10 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                 >
                   <TimerReset size={20} />
@@ -206,6 +227,12 @@ export function FocusModeDialog() {
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => toggleStrictFocus()} disabled={locked}>
+                  <Lock /> Concentration Max
+                  {strictFocus && <Check className="ml-auto text-foreground" />}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
