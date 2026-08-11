@@ -236,7 +236,7 @@ export function KanbanBoard() {
                 <span className="font-mono text-xs text-muted-foreground/70">{colTasks.length}</span>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pb-4">
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4">
                 {colTasks.map((task) => {
                   const project = projects.find((p) => p.id === task.projectId) ?? null;
                   const taskTags = task.tagIds
@@ -259,7 +259,7 @@ export function KanbanBoard() {
                       }}
                       onClick={() => selectTask(task.id)}
                       className={cn(
-                        'flex cursor-grab flex-col gap-2.5 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-all hover:border-foreground/15 hover:shadow-sm active:cursor-grabbing',
+                        'flex cursor-grab flex-col gap-2.5 rounded-xl border border-border bg-card px-4 py-4 text-left transition-all hover:border-foreground/15 hover:shadow-sm active:cursor-grabbing',
                         dragId === task.id && 'opacity-45',
                       )}
                     >
