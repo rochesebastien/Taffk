@@ -90,12 +90,12 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="flex h-full flex-col px-6">
+    <div className="flex h-full flex-col px-8">
       <header className="flex items-end justify-between gap-4 pb-4 pt-8">
         <h1 className="font-display text-3xl font-bold tracking-tight">Tableau Kanban</h1>
       </header>
 
-      <div className="relative pb-3">
+      <div className="relative pb-6">
         <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -206,7 +206,7 @@ export function KanbanBoard() {
         <QuickAdd />
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-3 pb-6">
+      <div className="flex min-h-0 flex-1 gap-6 pb-6">
         {COLUMNS.map((col) => {
           const colTasks = tasks
             .filter((t) => t.parentId === null && !t.archived && statusOf(t) === col.status)
@@ -217,8 +217,8 @@ export function KanbanBoard() {
             <div
               key={col.status}
               className={cn(
-                'flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-muted/30 transition-colors',
-                overCol === col.status ? 'border-ring bg-accent' : 'border-border',
+                'flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl transition-colors',
+                overCol === col.status ? 'bg-accent/60 ring-1 ring-ring' : 'ring-1 ring-transparent',
               )}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -230,15 +230,13 @@ export function KanbanBoard() {
               }}
               onDrop={() => onDrop(col.status)}
             >
-              <div className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-3">
-                <col.Icon size={14} className={cn('shrink-0', col.color)} />
-                <span className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {col.label}
-                </span>
+              <div className="flex shrink-0 items-center gap-2 px-2 pb-4 pt-2">
+                <col.Icon size={15} className={cn('shrink-0', col.color)} />
+                <span className="text-sm font-medium text-foreground">{col.label}</span>
                 <span className="font-mono text-xs text-muted-foreground/70">{colTasks.length}</span>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-3">
+              <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pb-4">
                 {colTasks.map((task) => {
                   const project = projects.find((p) => p.id === task.projectId) ?? null;
                   const taskTags = task.tagIds
@@ -261,7 +259,7 @@ export function KanbanBoard() {
                       }}
                       onClick={() => selectTask(task.id)}
                       className={cn(
-                        'flex cursor-grab flex-col gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-all hover:shadow-sm active:cursor-grabbing',
+                        'flex cursor-grab flex-col gap-2.5 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-all hover:border-foreground/15 hover:shadow-sm active:cursor-grabbing',
                         dragId === task.id && 'opacity-45',
                       )}
                     >
@@ -282,7 +280,7 @@ export function KanbanBoard() {
                             </Badge>
                           ))}
                           {task.estimateMinutes > 0 && (
-                            <span className="inline-flex items-center gap-1 font-mono leading-none text-muted-foreground/70">
+                            <span className="ml-auto inline-flex items-center gap-1 font-mono leading-none text-muted-foreground/70">
                               <Timer size={13} className="shrink-0" />
                               {formatEstimate(task.estimateMinutes)}
                             </span>
@@ -293,7 +291,9 @@ export function KanbanBoard() {
                   );
                 })}
                 {colTasks.length === 0 && (
-                  <div className="py-5 text-center text-xs text-muted-foreground/40">—</div>
+                  <div className="rounded-xl border border-dashed border-border/70 py-8 text-center text-xs text-muted-foreground/50">
+                    Déposez une tâche ici
+                  </div>
                 )}
               </div>
             </div>
