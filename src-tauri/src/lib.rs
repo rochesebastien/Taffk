@@ -96,6 +96,7 @@ pub fn run() {
             commands::time_today,
             commands::data_stats,
             commands::export_data,
+            commands::save_task_report,
             commands::import_data,
             commands::reset_data,
             commands::open_sticky_note,

@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import { FileDown } from 'lucide-react';
 import { useStore } from '../../lib/store';
+import { saveTaskReport } from '../../lib/api';
 import { isTypingTarget } from '../../lib/keyboard';
 import { todayIso } from '../../lib/dates';
+import { createTaskReport, taskReportFileName, type TaskReportScope } from '../../lib/taskReport';
 import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 import { QuickAdd } from './QuickAdd';
 import { TaskItem } from './TaskItem';
+import { TaskReportDialog } from './TaskReportDialog';
 import type { Task } from '../../lib/api';
 
 function sortTasks(a: Task, b: Task) {
@@ -23,6 +28,16 @@ export function TaskListView() {
   const drawerOpen = useStore((s) => s.selectedTaskId !== null);
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+  const activeProjectIds = useMemo(
+    () => new Set(projects.filter((project) => !project.archived).map((project) => project.id)),
+    [projects],
+  );
+  const reportableTasks = useMemo(
+    () => tasks.filter(
+      (task) => !task.archived && (task.projectId === null || activeProjectIds.has(task.projectId)),
+    ),
+    [tasks, activeProjectIds],
+  );
 
   const title =
     view === 'today' ? "Aujourd'hui" : view === 'all' ? 'Toutes les tâches' : (activeProject?.name ?? 'Projet');
@@ -47,6 +62,9 @@ export function TaskListView() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDone, setOverDone] = useState(false);
   const [overOpen, setOverOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const dragging = dragId ? visible.find((t) => t.id === dragId) ?? null : null;
 
@@ -78,6 +96,27 @@ export function TaskListView() {
     return () => window.removeEventListener('keydown', onKey);
   }, [visible, focusedId, drawerOpen, toggleDone, selectTask]);
 
+  async function exportReport(scope: TaskReportScope) {
+    const project = scope === 'current' ? activeProject : null;
+    setReportBusy(true);
+    setReportError(null);
+    try {
+      const report = createTaskReport({
+        tasks,
+        projects,
+        tags,
+        scope,
+        projectId: project?.id,
+      });
+      const saved = await saveTaskReport(taskReportFileName(project, todayIso()), report);
+      if (saved) setReportOpen(false);
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setReportBusy(false);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex w-full items-end justify-between gap-4 px-6 pb-4 pt-8">
@@ -85,6 +124,9 @@ export function TaskListView() {
           <h1 className="font-display text-3xl font-bold tracking-tight">{title}</h1>
           {subtitle && <span className="text-sm capitalize text-muted-foreground/70">{subtitle}</span>}
         </div>
+        <Button variant="outline" size="sm" onClick={() => setReportOpen(true)}>
+          <FileDown /> Exporter le rapport
+        </Button>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -193,6 +235,19 @@ export function TaskListView() {
           )}
         </div>
       </div>
+      <TaskReportDialog
+        open={reportOpen}
+        project={view === 'project' ? activeProject : null}
+        allCount={reportableTasks.length}
+        projectCount={reportableTasks.filter((task) => task.projectId === activeProject?.id).length}
+        busy={reportBusy}
+        error={reportError}
+        onOpenChange={(open) => {
+          setReportOpen(open);
+          if (!open) setReportError(null);
+        }}
+        onExport={(scope) => void exportReport(scope)}
+      />
     </div>
   );
 }
