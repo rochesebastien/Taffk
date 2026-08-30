@@ -36,13 +36,20 @@ import {
 import { useStore, type View } from '../lib/store';
 import { useSettings } from '../lib/settings';
 import { useTheme } from '../lib/theme';
-import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
+import {
+  useSidebar,
+  SIDEBAR_COLLAPSED,
+  SIDEBAR_DEFAULT,
+  SIDEBAR_MAX,
+  SIDEBAR_MIN,
+} from '../lib/sidebar';
 import { confirm } from '../lib/confirm';
 import { prompt } from '../lib/prompt';
 import { todayIso } from '../lib/dates';
 import { getDraggedTaskId, isTaskDrag } from '../lib/taskDrag';
 import { cn } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
+import { PanelResizeHandle } from './PanelResizeHandle';
 import { ProjectDialog } from './projects/ProjectDialog';
 import { Kbd } from './ui/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
@@ -166,23 +173,6 @@ export function Sidebar() {
     };
   }, []);
 
-  function startResize(e: React.MouseEvent) {
-    e.preventDefault();
-    setResizing(true);
-    const onMove = (ev: MouseEvent) => setWidth(ev.clientX);
-    const onUp = () => {
-      setResizing(false);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'col-resize';
-  }
-
   function openProjectDialog(project: Project | null) {
     setEditingProject(project);
     setProjectDialogOpen(true);
@@ -245,7 +235,7 @@ export function Sidebar() {
     <aside
       style={{ width: collapsed ? SIDEBAR_COLLAPSED : width }}
       className={cn(
-        'relative flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar py-4 text-sidebar-foreground',
+        'relative flex h-full max-w-[calc(100vw-4rem)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar py-4 text-sidebar-foreground md:max-w-[45vw]',
         collapsed ? 'px-2' : 'px-3',
         !resizing && 'transition-[width] duration-200 ease-out',
       )}
@@ -549,10 +539,15 @@ export function Sidebar() {
       </div>
 
       {!collapsed && (
-        <div
-          onMouseDown={startResize}
-          className="absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-primary/40"
-          title="Redimensionner"
+        <PanelResizeHandle
+          side="left"
+          value={width}
+          min={SIDEBAR_MIN}
+          max={SIDEBAR_MAX}
+          defaultValue={SIDEBAR_DEFAULT}
+          label="Redimensionner le panneau de navigation"
+          onChange={setWidth}
+          onDraggingChange={setResizing}
         />
       )}
     </aside>
