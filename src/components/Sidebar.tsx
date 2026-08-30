@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
   CalendarCheck,
@@ -16,6 +16,7 @@ import {
   FolderClock,
   FolderClosed,
   FolderHeart,
+  FolderInput,
   HandMetal,
   Inbox,
   ListTodo,
@@ -39,6 +40,7 @@ import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
 import { confirm } from '../lib/confirm';
 import { prompt } from '../lib/prompt';
 import { todayIso } from '../lib/dates';
+import { getDraggedTaskId, isTaskDrag } from '../lib/taskDrag';
 import { cn } from '../lib/utils';
 import { PomodoroWidget } from './PomodoroWidget';
 import { ProjectDialog } from './projects/ProjectDialog';
@@ -145,19 +147,31 @@ export function Sidebar() {
   const archiveProject = useStore((s) => s.archiveProject);
   const updateProject = useStore((s) => s.updateProject);
   const removeProject = useStore((s) => s.removeProject);
+  const moveTaskToProject = useStore((s) => s.moveTaskToProject);
 
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [projectsCollapsed, setProjectsCollapsed] = useState(false);
   const [projectSort, setProjectSort] = useState<ProjectSort>('default');
-  const [dragging, setDragging] = useState(false);
+  const [resizing, setResizing] = useState(false);
+  const [dropProjectId, setDropProjectId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const clearDropTarget = () => setDropProjectId(null);
+    window.addEventListener('dragend', clearDropTarget);
+    window.addEventListener('drop', clearDropTarget);
+    return () => {
+      window.removeEventListener('dragend', clearDropTarget);
+      window.removeEventListener('drop', clearDropTarget);
+    };
+  }, []);
 
   function startResize(e: React.MouseEvent) {
     e.preventDefault();
-    setDragging(true);
+    setResizing(true);
     const onMove = (ev: MouseEvent) => setWidth(ev.clientX);
     const onUp = () => {
-      setDragging(false);
+      setResizing(false);
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
@@ -233,7 +247,7 @@ export function Sidebar() {
       className={cn(
         'relative flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar py-4 text-sidebar-foreground',
         collapsed ? 'px-2' : 'px-3',
-        !dragging && 'transition-[width] duration-200 ease-out',
+        !resizing && 'transition-[width] duration-200 ease-out',
       )}
     >
       {collapsed ? (
@@ -303,14 +317,30 @@ export function Sidebar() {
         {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={() => setCollapsed(false)} className={railBtn} title="Projets">
+              <button
+                onClick={() => setCollapsed(false)}
+                onDragOver={(e) => {
+                  if (!isTaskDrag(e.dataTransfer)) return;
+                  e.preventDefault();
+                  setCollapsed(false);
+                }}
+                className={railBtn}
+                title="Projets"
+              >
                 <FolderClosed size={17} className="text-muted-foreground" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Projets</TooltipContent>
           </Tooltip>
         ) : (
-          <div className="flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80">
+          <div
+            className="flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80"
+            onDragOver={(e) => {
+              if (!projectsCollapsed || !isTaskDrag(e.dataTransfer)) return;
+              e.preventDefault();
+              setProjectsCollapsed(false);
+            }}
+          >
             <button
               className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition-colors hover:text-sidebar-foreground"
               onClick={() => setProjectsCollapsed((c) => !c)}
@@ -375,15 +405,34 @@ export function Sidebar() {
               return (
                 <div
                   key={p.id}
+                  onDragOver={(e) => {
+                    if (!isTaskDrag(e.dataTransfer)) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    setDropProjectId(p.id);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropProjectId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const taskId = getDraggedTaskId(e.dataTransfer);
+                    setDropProjectId(null);
+                    if (taskId) void moveTaskToProject(taskId, p.id);
+                  }}
                   className={cn(
-                    'group flex items-center gap-2 rounded-md py-1.5 pl-4 pr-2.5 text-sm transition-colors',
-                    active
+                    'group flex items-center gap-2 rounded-md py-1.5 pl-4 pr-2.5 text-sm transition-[color,background-color,box-shadow]',
+                    dropProjectId === p.id
+                      ? 'bg-primary/10 font-medium text-sidebar-accent-foreground ring-1 ring-inset ring-primary/40'
+                      : active
                       ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
                       : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
                   )}
                 >
                   <button onClick={() => openProject(p.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                    {p.pinned ? (
+                    {dropProjectId === p.id ? (
+                      <FolderInput size={14} className="shrink-0 text-primary" />
+                    ) : p.pinned ? (
                       <Pin size={12} className="shrink-0 text-primary" />
                     ) : (
                       <span className="shrink-0 text-muted-foreground">-</span>
@@ -391,46 +440,50 @@ export function Sidebar() {
                     <span className="min-w-0 flex-1 truncate">{p.name}</span>
                   </button>
 
-                  {count ? (
+                  {dropProjectId === p.id ? (
+                    <span className="shrink-0 text-xs font-medium text-primary">Déposer</span>
+                  ) : count ? (
                     <span className="font-mono text-xs text-muted-foreground group-hover:hidden group-has-[[data-state=open]]:hidden">
                       {count}
                     </span>
                   ) : null}
 
-                  <div className="hidden items-center gap-0.5 group-hover:flex group-has-[[data-state=open]]:flex">
-                    <button
-                      className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                      title="Modifier le projet"
-                      onClick={() => openProjectDialog(p)}
-                    >
-                      <SquarePen size={14} />
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                          title="Options"
-                        >
-                          <Ellipsis size={14} />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onSelect={() => void toggleProjectPin(p.id)}>
-                          {p.pinned ? <PinOff /> : <Pin />} {p.pinned ? 'Désépingler' : 'Épingler le projet'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => void renameProject(p)}>
-                          <PencilLine /> Renommer le projet
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => void archiveProject(p.id, true)}>
-                          <Archive /> Archiver
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onSelect={() => void confirmRemoveProject(p)}>
-                          <Trash2 /> Retirer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  {dropProjectId !== p.id && (
+                    <div className="hidden items-center gap-0.5 group-hover:flex group-has-[[data-state=open]]:flex">
+                      <button
+                        className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        title="Modifier le projet"
+                        onClick={() => openProjectDialog(p)}
+                      >
+                        <SquarePen size={14} />
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                            title="Options"
+                          >
+                            <Ellipsis size={14} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onSelect={() => void toggleProjectPin(p.id)}>
+                            {p.pinned ? <PinOff /> : <Pin />} {p.pinned ? 'Désépingler' : 'Épingler le projet'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => void renameProject(p)}>
+                            <PencilLine /> Renommer le projet
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => void archiveProject(p.id, true)}>
+                            <Archive /> Archiver
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" onSelect={() => void confirmRemoveProject(p)}>
+                            <Trash2 /> Retirer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
                 </div>
               );
             })}
