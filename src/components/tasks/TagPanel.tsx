@@ -1,9 +1,17 @@
+import { useState } from 'react';
 import { Hash, PanelRightClose } from 'lucide-react';
 import { useStore } from '../../lib/store';
 import { isOverdue } from '../../lib/dates';
 import { cn } from '../../lib/utils';
+import {
+  useRightPanelWidth,
+  RIGHT_PANEL_DEFAULT,
+  RIGHT_PANEL_MAX,
+  RIGHT_PANEL_MIN,
+} from '../../lib/sidebar';
 import { Checkbox } from '../ui/checkbox';
 import { Button } from '../ui/button';
+import { PanelResizeHandle } from '../PanelResizeHandle';
 import type { Tag } from '../../lib/api';
 
 export function TagPanel({ tag }: { tag: Tag }) {
@@ -12,6 +20,8 @@ export function TagPanel({ tag }: { tag: Tag }) {
   const selectTag = useStore((s) => s.selectTag);
   const selectTask = useStore((s) => s.selectTask);
   const toggleDone = useStore((s) => s.toggleDone);
+  const { width, setWidth } = useRightPanelWidth();
+  const [resizing, setResizing] = useState(false);
 
   const tagged = tasks
     .filter((t) => t.tagIds.includes(tag.id) && !t.archived)
@@ -24,7 +34,24 @@ export function TagPanel({ tag }: { tag: Tag }) {
   }
 
   return (
-    <aside className="flex w-[440px] shrink-0 flex-col overflow-hidden border-l border-border bg-background duration-200 animate-in slide-in-from-right-8">
+    <aside
+      style={{ width }}
+      className={cn(
+        'relative flex max-w-[calc(100vw-4rem)] shrink-0 flex-col overflow-hidden border-l border-border bg-background animate-in slide-in-from-right-8 md:max-w-[60vw]',
+        'max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:shadow-xl',
+        !resizing && 'transition-[width] duration-200',
+      )}
+    >
+      <PanelResizeHandle
+        side="right"
+        value={width}
+        min={RIGHT_PANEL_MIN}
+        max={RIGHT_PANEL_MAX}
+        defaultValue={RIGHT_PANEL_DEFAULT}
+        label="Redimensionner le panneau du tag"
+        onChange={setWidth}
+        onDraggingChange={setResizing}
+      />
       <div className="flex items-center justify-between border-b p-3">
         <div className="flex min-w-0 items-center gap-2 pl-1">
           <Hash size={16} className="shrink-0" style={{ color: tag.color ?? undefined }} />

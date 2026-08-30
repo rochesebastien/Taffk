@@ -7,8 +7,15 @@ import { confirm } from '../../lib/confirm';
 import { useSettings } from '../../lib/settings';
 import { ESTIMATE_OPTIONS, formatCreatedAt, formatEstimate, isOverdue, isoDate, todayIso, tomorrowIso } from '../../lib/dates';
 import { cn, isMac } from '../../lib/utils';
+import {
+  useRightPanelWidth,
+  RIGHT_PANEL_DEFAULT,
+  RIGHT_PANEL_MAX,
+  RIGHT_PANEL_MIN,
+} from '../../lib/sidebar';
 import { NotesPopup } from './NotesPopup';
 import { TaskCustomProps } from './TaskCustomProps';
+import { PanelResizeHandle } from '../PanelResizeHandle';
 import { renderMarkdown } from '../../lib/markdown';
 import { Checkbox } from '../ui/checkbox';
 import './markdown.css';
@@ -74,6 +81,7 @@ export function TaskDetail({ task }: Props) {
   const running = usePomodoro((s) => s.running);
   const focusTaskId = usePomodoro((s) => s.focusTaskId);
   const experimental = useSettings((s) => s.experimental);
+  const { width, setWidth } = useRightPanelWidth();
 
   const isFocusTarget = focusTaskId === task.id && current > 0;
   const readOnly = task.archived;
@@ -85,6 +93,7 @@ export function TaskDetail({ task }: Props) {
   const [subDraft, setSubDraft] = useState('');
   const [planOpen, setPlanOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [resizing, setResizing] = useState(false);
 
   const isSubtask = task.parentId !== null;
   const parent = isSubtask ? tasks.find((t) => t.id === task.parentId) : undefined;
@@ -163,7 +172,24 @@ export function TaskDetail({ task }: Props) {
   const overdue = isOverdue(task.scheduledFor, task.done);
 
   return (
-    <aside className="flex w-[440px] shrink-0 flex-col overflow-hidden border-l border-border bg-background duration-200 animate-in slide-in-from-right-8">
+    <aside
+      style={{ width }}
+      className={cn(
+        'relative flex max-w-[calc(100vw-4rem)] shrink-0 flex-col overflow-hidden border-l border-border bg-background animate-in slide-in-from-right-8 md:max-w-[60vw]',
+        'max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:shadow-xl',
+        !resizing && 'transition-[width] duration-200',
+      )}
+    >
+      <PanelResizeHandle
+        side="right"
+        value={width}
+        min={RIGHT_PANEL_MIN}
+        max={RIGHT_PANEL_MAX}
+        defaultValue={RIGHT_PANEL_DEFAULT}
+        label="Redimensionner le panneau de détail"
+        onChange={setWidth}
+        onDraggingChange={setResizing}
+      />
       <div className="flex flex-row items-center justify-between border-b p-3">
         <h2 className="sr-only">Détail de la tâche</h2>
           <Button

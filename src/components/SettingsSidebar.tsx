@@ -15,12 +15,20 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
+import { useState } from 'react';
 import { openExternal } from '../lib/api';
 import { useStore, type SettingsSection } from '../lib/store';
 import { useTheme } from '../lib/theme';
-import { useSidebar, SIDEBAR_COLLAPSED } from '../lib/sidebar';
+import {
+  useSidebar,
+  SIDEBAR_COLLAPSED,
+  SIDEBAR_DEFAULT,
+  SIDEBAR_MAX,
+  SIDEBAR_MIN,
+} from '../lib/sidebar';
 import { cn } from '../lib/utils';
 import { NavItem } from './Sidebar';
+import { PanelResizeHandle } from './PanelResizeHandle';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import logoDark from '../assets/logo_navbar_dark.svg';
 import logoLight from '../assets/logo_navbar_light.svg';
@@ -52,7 +60,8 @@ const railBtn =
 
 export function SettingsSidebar() {
   const { theme } = useTheme();
-  const { width, collapsed, toggleCollapsed } = useSidebar();
+  const { width, setWidth, collapsed, toggleCollapsed } = useSidebar();
+  const [dragging, setDragging] = useState(false);
   const section = useStore((s) => s.settingsSection);
   const setSection = useStore((s) => s.setSettingsSection);
   const closeSettings = useStore((s) => s.closeSettings);
@@ -61,8 +70,9 @@ export function SettingsSidebar() {
     <aside
       style={{ width: collapsed ? SIDEBAR_COLLAPSED : width }}
       className={cn(
-        'relative flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar py-4 text-sidebar-foreground',
+        'relative flex h-full max-w-[calc(100vw-4rem)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar py-4 text-sidebar-foreground md:max-w-[45vw]',
         collapsed ? 'px-2' : 'px-3',
+        !dragging && 'transition-[width] duration-200 ease-out',
       )}
     >
       {collapsed ? (
@@ -132,6 +142,19 @@ export function SettingsSidebar() {
       </nav>
 
       <div className="h-32 shrink-0" />
+
+      {!collapsed && (
+        <PanelResizeHandle
+          side="left"
+          value={width}
+          min={SIDEBAR_MIN}
+          max={SIDEBAR_MAX}
+          defaultValue={SIDEBAR_DEFAULT}
+          label="Redimensionner le panneau des paramètres"
+          onChange={setWidth}
+          onDraggingChange={setDragging}
+        />
+      )}
     </aside>
   );
 }
