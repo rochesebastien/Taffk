@@ -280,3 +280,26 @@ export async function pickOpenPath(): Promise<string | null> {
   const res = await open({ multiple: false, filters: [{ name: 'JSON', extensions: ['json'] }] });
   return typeof res === 'string' ? res : null;
 }
+
+export async function saveTaskReport(defaultName: string, content: string): Promise<boolean> {
+  if (isTauri) {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const path = await save({
+      defaultPath: defaultName,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    });
+    if (!path) return false;
+    await invoke('save_task_report', { path, content });
+    return true;
+  }
+
+  const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = defaultName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  return true;
+}

@@ -184,6 +184,11 @@ pub fn export_data(
 }
 
 #[tauri::command]
+pub fn save_task_report(path: String, content: String) -> Result<(), String> {
+    std::fs::write(path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn import_data(
     path: String,
     selection: BackupSelection,
