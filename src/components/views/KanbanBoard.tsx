@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../lib/store';
 import { formatEstimate } from '../../lib/dates';
+import { setDraggedTask } from '../../lib/taskDrag';
 import { cn } from '../../lib/utils';
 import { QuickAdd } from '../tasks/QuickAdd';
 import { Badge } from '../ui/badge';
@@ -249,8 +250,7 @@ export function KanbanBoard() {
                       tabIndex={0}
                       draggable
                       onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', task.id);
-                        e.dataTransfer.effectAllowed = 'move';
+                        setDraggedTask(e.dataTransfer, task.id);
                         setDragId(task.id);
                       }}
                       onDragEnd={() => {

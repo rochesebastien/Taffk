@@ -3,6 +3,7 @@ import { Archive, ClockAlert, FolderOutput, NotepadText, PanelRight, Pause, Play
 import { useStore } from '../../lib/store';
 import { usePomodoro } from '../../lib/pomodoro';
 import { formatEstimate, formatShortDate, isOverdue, todayIso } from '../../lib/dates';
+import { setDraggedTask } from '../../lib/taskDrag';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
@@ -269,8 +270,7 @@ export function TaskItem({ task, projects, tags, focused = false, nested = false
       ref={ref}
       draggable={draggable}
       onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', task.id);
-        e.dataTransfer.effectAllowed = 'move';
+        setDraggedTask(e.dataTransfer, task.id);
         onDragStart?.();
       }}
       onDragEnd={onDragEnd}

@@ -100,6 +100,7 @@ type Store = {
   resolveProjectByHandle: (handle: string) => Promise<string | null>;
   toggleDone: (id: string, done: boolean) => Promise<void>;
   moveTask: (id: string, status: TaskStatus) => Promise<void>;
+  moveTaskToProject: (id: string, projectId: string) => Promise<void>;
   patchTask: (patch: TaskPatch) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   archiveTask: (id: string, archived: boolean) => Promise<void>;
@@ -343,6 +344,13 @@ export const useStore = create<Store>((set, get) => ({
 
   async moveTask(id, status) {
     const task = await api.updateTask({ id, status, done: status === 'done' });
+    set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
+  },
+
+  async moveTaskToProject(id, projectId) {
+    const current = get().tasks.find((t) => t.id === id);
+    if (!current || current.projectId === projectId) return;
+    const task = await api.updateTask({ id, projectId });
     set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
   },
 
