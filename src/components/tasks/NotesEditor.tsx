@@ -78,7 +78,7 @@ export function NotesEditor({ initial, onSave, editable = true }: Props) {
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: 'Écrivez… le markdown est rendu en direct (# titre, - liste, [ ] tâche).' }),
-      Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: true }),
+      Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false }),
     ],
     content: initial,
     editorProps: { attributes: { class: 'preview min-h-full' } },
