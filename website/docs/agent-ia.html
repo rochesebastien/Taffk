@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent IA — Documentation Taffk</title>
+    <meta name="description" content="Brancher Claude Code, Claude Desktop, Cursor ou Codex sur Taffk via MCP." />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#1218fc" />
+    <meta property="og:title" content="Agent IA — Documentation Taffk" />
+    <meta property="og:description" content="Brancher Claude Code, Claude Desktop, Cursor ou Codex sur Taffk via MCP." />
+    <meta property="og:type" content="article" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="icon" type="image/png" sizes="128x128" href="../assets/favicon-128.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png" />
+  </head>
+  <body>
+    <nav class="nav" id="nav">
+      <div class="container nav-inner">
+        <a href="../index.html" class="brand" aria-label="Taffk — accueil">
+          <img class="brand-logo light-only" src="../assets/logo_navbar_dark.png" alt="Taffk" />
+          <img class="brand-logo dark-only" src="../assets/logo_navbar_light.png" alt="Taffk" />
+        </a>
+        <div class="nav-links">
+          <a href="../index.html#features">Fonctionnalités</a>
+          <a href="../index.html#keyboard">Clavier</a>
+          <a href="index.html" class="active">Documentation</a>
+        </div>
+        <div class="nav-actions">
+          <button class="theme-toggle" id="themeToggle" aria-label="Changer de thème">
+            <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          </button>
+          <a href="../index.html#download" class="btn btn-primary">Télécharger</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="docs">
+      <div class="container docs-layout">
+        <aside class="docs-nav">
+          <div class="docs-nav-title">Documentation</div>
+          <nav>
+            <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Vue d'ensemble</span></a>
+            <a href="agent-ia.html" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 16h.01M16 16h.01"/></svg><span>Agent IA</span></a>
+            <a href="cli.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span>CLI</span></a>
+            <a href="skill.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg><span>Skill</span></a>
+          </nav>
+          <div class="docs-nav-foot">
+            <a href="https://github.com/rochesebastien/Taffk" target="_blank" rel="noopener">Code source ↗</a>
+            <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol ↗</a>
+          </div>
+        </aside>
+
+        <article class="docs-content">
+          <div class="docs-crumbs"><a href="index.html">Documentation</a><span>/</span><span>Agent IA</span></div>
+          <h1 id="agent-ia">Agent IA</h1>
+<p>Taffk expose un serveur <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP</a> (Model Context
+Protocol). Une fois branché, un agent IA — Claude Code, Claude Desktop, Cursor,
+Codex ou tout autre client MCP — peut lister vos tâches, en créer, les planifier,
+les terminer et consigner du temps, directement dans votre base locale.</p>
+<h2 id="prerequis">Prérequis</h2>
+<p>Le serveur est embarqué dans <code>taffk-cli</code> (voir
+<a href="index.html#installer-taffk-cli">Installer <code>taffk-cli</code></a>). Il doit être
+accessible depuis votre <code>PATH</code> :</p>
+<pre><code class="language-sh">taffk-cli --version
+</code></pre>
+<p>Sur Windows, si la commande n’est pas trouvée, utilisez le chemin complet du
+<code>.exe</code> dans les configurations ci-dessous (par exemple
+<code>C:\Users\vous\bin\taffk-cli.exe</code>).</p>
+<h2 id="configuration">Configuration</h2>
+<p>Le serveur se lance avec <code>taffk-cli mcp</code> et communique sur son entrée/sortie
+standard (transport <em>stdio</em>). Chaque client a sa manière de le déclarer.</p>
+<h3 id="claude-code">Claude Code</h3>
+<pre><code class="language-sh">claude mcp add --scope user taffk -- taffk-cli mcp
+</code></pre>
+<p><code>--scope user</code> rend le serveur disponible dans tous vos projets. Vérifiez avec
+<code>claude mcp list</code>, ou tapez <code>/mcp</code> dans une session.</p>
+<h3 id="claude-desktop">Claude Desktop</h3>
+<p>Ouvrez <em>Paramètres → Développeur → Modifier la configuration</em> et ajoutez le
+serveur dans <code>claude_desktop_config.json</code> :</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;taffk&quot;: {
+      &quot;command&quot;: &quot;taffk-cli&quot;,
+      &quot;args&quot;: [&quot;mcp&quot;]
+    }
+  }
+}
+</code></pre>
+<p>Redémarrez Claude Desktop : l’icône des outils affiche <code>taffk</code>.</p>
+<h3 id="cursor">Cursor</h3>
+<p>Dans <code>~/.cursor/mcp.json</code> (global) ou <code>.cursor/mcp.json</code> (projet) :</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;taffk&quot;: {
+      &quot;command&quot;: &quot;taffk-cli&quot;,
+      &quot;args&quot;: [&quot;mcp&quot;]
+    }
+  }
+}
+</code></pre>
+<h3 id="codex">Codex</h3>
+<pre><code class="language-sh">codex mcp add taffk -- taffk-cli mcp
+</code></pre>
+<h3 id="autre-base-que-celle-de-l-application">Autre base que celle de l’application</h3>
+<p>Ajoutez la variable d’environnement <code>TAFFK_DB</code> à la configuration du serveur
+(<code>&quot;env&quot;: { &quot;TAFFK_DB&quot;: &quot;/chemin/vers/autre.db&quot; }</code>), ou passez <code>--db</code> avant
+<code>mcp</code> : <code>taffk-cli --db /chemin/vers/autre.db mcp</code>.</p>
+<h2 id="outils-disponibles">Outils disponibles</h2>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Ce qu’il fait</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_tasks</code></td>
+<td>Liste les tâches ; filtres <code>query</code>, <code>project</code>, <code>tag</code>, <code>status</code>, <code>scheduledFor</code>, <code>includeDone</code>, <code>includeArchived</code>.</td>
+</tr>
+<tr>
+<td><code>get_task</code></td>
+<td>Une tâche complète, notes markdown comprises.</td>
+</tr>
+<tr>
+<td><code>create_task</code></td>
+<td>Crée une tâche (titre avec <code>#etiquette</code> / <code>@projet</code>, dates, estimation, sous-tâche).</td>
+</tr>
+<tr>
+<td><code>update_task</code></td>
+<td>Modifie les champs fournis ; <code>null</code> efface projet, dates ou parent.</td>
+</tr>
+<tr>
+<td><code>complete_task</code></td>
+<td>Termine ou rouvre une tâche, avec cascade sur les sous-tâches.</td>
+</tr>
+<tr>
+<td><code>archive_task</code></td>
+<td>Archive ou restaure une tâche.</td>
+</tr>
+<tr>
+<td><code>delete_task</code></td>
+<td>Supprime définitivement une tâche.</td>
+</tr>
+<tr>
+<td><code>list_projects</code> · <code>create_project</code> · <code>update_project</code> · <code>delete_project</code></td>
+<td>Projets, avec alias, couleur, épinglage, archivage.</td>
+</tr>
+<tr>
+<td><code>list_tags</code> · <code>create_tag</code> · <code>delete_tag</code></td>
+<td>Étiquettes.</td>
+</tr>
+<tr>
+<td><code>log_time</code></td>
+<td>Enregistre une session de travail ou de pause (en minutes).</td>
+</tr>
+<tr>
+<td><code>time_summary</code></td>
+<td>Temps de travail et de pause d’une journée, par tâche.</td>
+</tr>
+<tr>
+<td><code>stats</code></td>
+<td>Compteurs, date du jour et temps travaillé aujourd’hui.</td>
+</tr>
+</tbody>
+</table>
+<p>Chaque outil renvoie du JSON avec les noms résolus (<code>projectName</code>, <code>tagNames</code>)
+et un <code>shortId</code> de 8 caractères, réutilisable tel quel dans l’appel suivant.</p>
+<h2 id="conventions">Conventions</h2>
+<ul>
+<li><strong>Identifiants</strong> — un id complet, un préfixe unique (les 8 premiers
+caractères suffisent) ou le titre exact d’une tâche. Un projet se désigne par
+son nom, son alias ou son id ; une étiquette par son nom.</li>
+<li><strong>Syntaxe rapide</strong> — dans un titre, <code>#etiquette</code> ajoute une étiquette (créée
+si besoin) et <code>@projet</code> rattache au projet (créé s’il n’existe pas), comme
+dans la saisie rapide de l’application.</li>
+<li><strong>Dates</strong> — <code>YYYY-MM-DD</code>, ou <code>today</code> / <code>tomorrow</code> (aussi <code>aujourd'hui</code>,
+<code>demain</code>). Les dates sont locales à votre machine. La vue <em>Aujourd’hui</em> de
+l’application correspond à <code>scheduledFor: &quot;today&quot;</code>.</li>
+<li><strong>Statut</strong> — <code>todo</code>, <code>in_progress</code> ou <code>done</code>. Passer en <code>done</code> coche la
+tâche, tout autre statut la décoche : l’agent ne peut pas les désynchroniser.</li>
+<li><strong>Listes</strong> — par défaut, <code>list_tasks</code> cache les tâches terminées et archivées.</li>
+</ul>
+<h2 id="exemples-de-demandes">Exemples de demandes</h2>
+<p>Une fois le serveur branché, parlez simplement de votre travail :</p>
+<blockquote>
+<p>Qu’est-ce que j’ai prévu aujourd’hui ?</p>
+</blockquote>
+<blockquote>
+<p>Ajoute « préparer la démo » au projet Client pour demain, 30 minutes.</p>
+</blockquote>
+<blockquote>
+<p>Passe la tâche « relire le contrat » en cours et note-lui 25 minutes.</p>
+</blockquote>
+<blockquote>
+<p>Liste ce qui est en retard dans le projet Site, et propose un ordre pour
+cette semaine.</p>
+</blockquote>
+<p>Pour que l’agent applique ces conventions sans qu’on les lui rappelle, installez
+aussi le <a href="skill.html">skill</a>.</p>
+<h2 id="sous-le-capot">Sous le capot</h2>
+<p><code>taffk-cli mcp</code> est un serveur MCP minimal : JSON-RPC 2.0 sur stdio, un message
+par ligne, méthodes <code>initialize</code>, <code>tools/list</code> et <code>tools/call</code>. Il ouvre le
+même fichier SQLite que l’application ; celle-ci détecte les écritures externes
+et se rafraîchit d’elle-même. Aucune connexion réseau n’est ouverte par le
+serveur. Le code vit dans <code>src-tauri/crates/taffk-cli/src/mcp.rs</code>.</p>
+
+          <div class="docs-foot">
+            <span>Cette page est générée depuis <a href="https://github.com/rochesebastien/Taffk/blob/main/docs/agents.md" target="_blank" rel="noopener"><code>docs/agents.md</code></a>.</span>
+          </div>
+        </article>
+
+        <aside class="docs-toc">
+          <div class="docs-toc-title">Sur cette page</div>
+            <nav>
+              <a href="#prerequis">Prérequis</a>
+              <a href="#configuration">Configuration</a>
+              <a href="#outils-disponibles">Outils disponibles</a>
+              <a href="#conventions">Conventions</a>
+              <a href="#exemples-de-demandes">Exemples de demandes</a>
+              <a href="#sous-le-capot">Sous le capot</a>
+            </nav>
+        </aside>
+      </div>
+    </main>
+
+    <script src="../app.js"></script>
+  </body>
+</html>

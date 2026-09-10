@@ -133,7 +133,7 @@ jobs:
             | **Installateur Windows** | `Taffk_*_x64-setup.exe` | Installation classique (raccourcis, désinstalleur). |
             | **Portable Windows** | `Taffk_*_x64_portable.exe` | Aucun installateur : lancez le `.exe` directement, où vous voulez. |
             | **macOS** | `Taffk_*_universal.dmg` | Intel et Apple Silicon. Ouvrez le `.dmg` et glissez Taffk où vous voulez. |
-            | **CLI + serveur MCP** | `taffk-cli_*_x64.exe` / `taffk-cli_*_universal` | Optionnel : pilotez Taffk depuis le terminal ou un agent IA (voir Documentation dans l'application). |
+            | **CLI + serveur MCP** | `taffk-cli_*_x64.exe` / `taffk-cli_*_universal` | Optionnel : pilotez Taffk depuis le terminal ou un agent IA ([documentation](https://taffk.vercel.app/docs/)). |
             | **Code source** | *Source code* (zip / tar.gz) ci-dessous | Compiler vous-même. |
 
             > **macOS** : l'application n'est pas notariée. Au premier lancement,

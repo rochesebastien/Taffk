@@ -32,8 +32,8 @@ planner, and track focus time with a built-in Pomodoro timer.
   terminal (`taffk-cli task add "Relire le contrat #urgent @Client"`, `--json`
   for scripts) and `taffk-cli mcp` exposes it to AI agents (Claude Code, Claude
   Desktop, Cursor, Codex…) over the Model Context Protocol. A `SKILL.md`
-  teaches agents the conventions. The in-app **Documentation** view explains
-  all three.
+  teaches agents the conventions. Docs: [taffk.vercel.app/docs](https://taffk.vercel.app/docs/)
+  (source in `docs/`).
 
 ## Stack
 

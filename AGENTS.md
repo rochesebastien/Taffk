@@ -46,8 +46,9 @@ Migration + refactor complete. Landed slices:
 - [x] **UI refonte** — Tailwind v4 + shadcn/ui, flat light/dark theme (Notion/Codex),
   centered task cards. `app.css` removed; tokens live in `index.css`.
 - [x] **CLI, MCP & docs** — `taffk-core` crate (db + models + shared `ops`),
-  `taffk-cli` binary (terminal + `--json` + `taffk-cli mcp` server), in-app
-  Documentation view (`docs/*.md` rendered from markdown), `skills/taffk/SKILL.md`.
+  `taffk-cli` binary (terminal + `--json` + `taffk-cli mcp` server), user docs
+  in `docs/*.md` published on the website (`website/docs/`, generated), linked
+  from the app sidebar, `skills/taffk/SKILL.md`.
 
 Roadmap items beyond this live in `/tasks/list.md` and the issue tracker.
 
@@ -74,8 +75,10 @@ src-tauri/                — Cargo workspace root (app crate + crates/*)
                     db/mcp/skill), `--json`, embeds skills/taffk/SKILL.md
     mcp.rs        — stdio MCP server: initialize / tools/list / tools/call
     render.rs     — human output
-docs/                     — user docs (markdown), rendered in-app by DocsView
-  overview.md · agents.md · cli.md · skill.md
+docs/                     — user docs (markdown, THE source): overview · agents ·
+                            cli · skill. `npm run docs:build` renders them into
+website/docs/*.html       — (generated, committed; the site has no build step)
+website/build-docs.mjs    — the generator (markdown-it, site nav/layout template)
 skills/taffk/SKILL.md     — agent skill, installed by `taffk-cli skill install`
 src/
   App.tsx           — shell (sidebar + main, flat), view switch, detail drawer, Esc
@@ -97,9 +100,6 @@ src/
                       dropdown-menu, scroll-area, separator, tooltip, badge, progress)
     Sidebar / TaskListView / TaskItem / QuickAdd / TaskDetail / MarkdownNotes /
     KanbanBoard / CalendarView / PomodoroWidget / KeyboardHelp
-    DocsSidebar / views/DocsView — Documentation view: `docs/*.md?raw` →
-                      `renderDocs()` (heading ids + "on this page" rail),
-                      copy buttons on code blocks, `.md` links map to sections
     markdown.css        — rendered-markdown (.preview) prose, themed via shadcn tokens
     calendar-theme.css  — react-big-calendar overrides, themed via shadcn tokens
 ```
@@ -140,6 +140,7 @@ npm install                    # first time only
 npm run tauri dev              # dev (cold Rust build ~5 min, then incremental)
 npm run check                  # tsc --noEmit
 npm run build                  # tsc + vite build
+npm run docs:build             # docs/*.md → website/docs/*.html
 cd src-tauri && cargo check    # Rust-only fast check (needs Tauri libs)
 cd src-tauri && cargo test --workspace          # all Rust unit tests
 cd src-tauri && cargo test -p taffk-core -p taffk-cli   # no Tauri libs needed
@@ -158,9 +159,11 @@ cd src-tauri && cargo run -p taffk-cli -- --db /tmp/t.db task list
   `data_version` (1s) and emits the same `taffk://data-changed` event the sticky
   windows use, so the store reloads. `busy_timeout` is set so concurrent access
   waits instead of failing.
-- **Docs are markdown** imported with `?raw` from `docs/` (outside `src/`, fine
-  for Vite). The first `# Title` is hidden in-app (shown in the header) so the
-  files still read well on GitHub. Cross-page links are `cli.md#anchor`.
+- **Docs live on the website, not in the app.** Edit `docs/*.md`, run
+  `npm run docs:build`, commit the regenerated `website/docs/*.html`. The app
+  only links to `https://taffk.vercel.app/docs/` (sidebar + settings links).
+  Cross-page links in the markdown are `cli.md#anchor`; the generator rewrites
+  them to the `.html` pages.
 - **DB location**: `app_data_dir()/taffk.db`, created in `.setup()` before
   `app.manage(db)`. Not in the repo.
 - **Tauri 2 plugin permissions**: any plugin (e.g. `global-shortcut`) needs an

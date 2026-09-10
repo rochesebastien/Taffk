@@ -54,7 +54,10 @@ import { PanelResizeHandle } from './PanelResizeHandle';
 import { ProjectDialog } from './projects/ProjectDialog';
 import { Kbd } from './ui/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { type Project } from '../lib/api';
+import { openExternal, type Project } from '../lib/api';
+
+/** Doc hébergée sur le site vitrine (générée depuis `docs/*.md`). */
+export const DOCS_URL = 'https://taffk.vercel.app/docs/';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -148,7 +151,6 @@ export function Sidebar() {
   const tags = useStore((s) => s.tags);
   const setView = useStore((s) => s.setView);
   const openSettings = useStore((s) => s.openSettings);
-  const openDocs = useStore((s) => s.openDocs);
   const openProject = useStore((s) => s.openProject);
   const openSpotlight = useStore((s) => s.openSpotlight);
   const openSearch = useStore((s) => s.openSearch);
@@ -534,9 +536,10 @@ export function Sidebar() {
         <NavItem
           icon={BookOpen}
           label="Documentation"
-          active={view === 'docs'}
+          active={false}
           collapsed={collapsed}
-          onClick={() => openDocs()}
+          external
+          onClick={() => void openExternal(DOCS_URL)}
         />
         <NavItem
           icon={Settings}

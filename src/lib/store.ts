@@ -3,7 +3,7 @@ import { api, type Project, type Tag, type Task, type TaskPatch, type TaskStatus
 import { isoDate } from './dates';
 import { readSettings } from './settings';
 
-export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'time' | 'tags' | 'settings' | 'docs';
+export type View = 'today' | 'all' | 'project' | 'board' | 'calendar' | 'time' | 'tags' | 'settings';
 
 export type SettingsSection =
   | 'general'
@@ -13,8 +13,6 @@ export type SettingsSection =
   | 'data'
   | 'shortcuts'
   | 'updates'
-
-export type DocsSection = 'overview' | 'agents' | 'cli' | 'skill';
 
 export type QuickAddParsed = {
   title: string;
@@ -50,24 +48,6 @@ export function parseQuickAdd(raw: string): QuickAddParsed {
 
 const todayStr = () => isoDate(new Date());
 
-type SetState = (partial: Partial<Store>) => void;
-type GetState = () => Store;
-
-/** Settings and docs are full-screen views that remember where the user came from. */
-function openOverlayView(set: SetState, get: GetState, view: 'settings' | 'docs') {
-  const current = get().view;
-  if (current === 'settings' || current === 'docs') {
-    set({ view });
-    return;
-  }
-  set({ prevView: current, prevProjectId: get().activeProjectId, view });
-}
-
-function closeOverlayView(set: SetState, get: GetState) {
-  const v = get().prevView;
-  set({ view: v, activeProjectId: v === 'project' ? get().prevProjectId : null });
-}
-
 type Store = {
   tasks: Task[];
   projects: Project[];
@@ -77,7 +57,6 @@ type Store = {
   prevView: View;
   prevProjectId: string | null;
   settingsSection: SettingsSection;
-  docsSection: DocsSection;
   activeProjectId: string | null;
   selectedTaskId: string | null;
   selectedTagId: string | null;
@@ -92,9 +71,6 @@ type Store = {
   openSettings: () => void;
   closeSettings: () => void;
   setSettingsSection: (section: SettingsSection) => void;
-  openDocs: (section?: DocsSection) => void;
-  closeDocs: () => void;
-  setDocsSection: (section: DocsSection) => void;
   openProject: (projectId: string) => void;
   selectTask: (id: string | null) => void;
   selectTag: (id: string | null) => void;
@@ -150,7 +126,6 @@ export const useStore = create<Store>((set, get) => ({
   prevView: 'today',
   prevProjectId: null,
   settingsSection: 'general',
-  docsSection: 'overview',
   activeProjectId: null,
   selectedTaskId: null,
   selectedTagId: null,
@@ -181,23 +156,14 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
   openSettings() {
-    openOverlayView(set, get, 'settings');
+    set({ prevView: get().view, prevProjectId: get().activeProjectId, view: 'settings' });
   },
   closeSettings() {
-    closeOverlayView(set, get);
+    const v = get().prevView;
+    set({ view: v, activeProjectId: v === 'project' ? get().prevProjectId : null });
   },
   setSettingsSection(section) {
     set({ settingsSection: section });
-  },
-  openDocs(section) {
-    openOverlayView(set, get, 'docs');
-    if (section) set({ docsSection: section });
-  },
-  closeDocs() {
-    closeOverlayView(set, get);
-  },
-  setDocsSection(section) {
-    set({ docsSection: section });
   },
   openProject(projectId) {
     set({ view: 'project', activeProjectId: projectId });
