@@ -59,26 +59,65 @@ impl Db {
         Self::from_conn(conn)
     }
 
-    #[cfg(test)]
     pub fn open_in_memory() -> SqlResult<Self> {
         let conn = Connection::open_in_memory()?;
         Self::from_conn(conn)
     }
 
     fn from_conn(conn: Connection) -> SqlResult<Self> {
-        conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+        // The desktop app, the CLI and the MCP server may all hold a connection
+        // to the same file: wait for a short lock instead of failing with BUSY.
+        conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;")?;
         conn.execute_batch(BOOTSTRAP)?;
         // Idempotent column adds for DBs created before a column existed.
         // SQLite has no `ADD COLUMN IF NOT EXISTS`; the duplicate-column error
         // on an already-migrated DB is expected and ignored.
         let _ = conn.execute("ALTER TABLE tasks ADD COLUMN scheduled_time TEXT", []);
         let _ = conn.execute("ALTER TABLE projects ADD COLUMN alias TEXT", []);
-        let _ = conn.execute("ALTER TABLE projects ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0", []);
-        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0", []);
-        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN custom_props TEXT NOT NULL DEFAULT '{}'", []);
+        let _ = conn.execute(
+            "ALTER TABLE projects ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE tasks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE tasks ADD COLUMN custom_props TEXT NOT NULL DEFAULT '{}'",
+            [],
+        );
         Ok(Db {
             conn: Arc::new(Mutex::new(conn)),
         })
+    }
+
+    /// SQLite's per-connection counter, bumped whenever *another* connection
+    /// commits to the file. Polled by the desktop app to notice CLI/MCP writes.
+    pub fn data_version(&self) -> SqlResult<i64> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("PRAGMA data_version", [], |r| r.get(0))
+    }
+
+    /// Local date `offset_days` from today as `YYYY-MM-DD`, computed by SQLite
+    /// so every process agrees on the same local-time rule.
+    pub fn local_date(&self, offset_days: i64) -> SqlResult<String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT date('now', 'localtime', ?1 || ' days')",
+            params![offset_days],
+            |r| r.get(0),
+        )
+    }
+
+    /// UTC date `offset_days` from today: `time_entries` timestamps are stored
+    /// in UTC (`datetime('now')`), so day totals must be cut on UTC days too.
+    pub fn utc_date(&self, offset_days: i64) -> SqlResult<String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT date('now', ?1 || ' days')",
+            params![offset_days],
+            |r| r.get(0),
+        )
     }
 
     // ---- tasks ----------------------------------------------------------
@@ -228,6 +267,11 @@ impl Db {
         Self::query_task(&conn, &patch.id)
     }
 
+    pub fn get_task(&self, id: &str) -> SqlResult<Option<TaskDto>> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_tasks(&conn, Some(id)).map(|mut v| v.pop())
+    }
+
     pub fn delete_task(&self, id: &str) -> SqlResult<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM tasks WHERE id = ?1", params![id])?;
@@ -296,7 +340,8 @@ impl Db {
                     updated_at: row.get(13)?,
                     completed_at: row.get(14)?,
                     archived: row.get::<_, i64>(16)? != 0,
-                    custom_props: serde_json::from_str(&row.get::<_, String>(17)?).unwrap_or_default(),
+                    custom_props: serde_json::from_str(&row.get::<_, String>(17)?)
+                        .unwrap_or_default(),
                     tag_ids: Vec::new(),
                 },
                 id,
@@ -550,10 +595,26 @@ impl Db {
         Ok(Backup {
             version: 1,
             exported_at,
-            projects: if sel.projects { self.list_projects()? } else { Vec::new() },
-            tags: if sel.tags { self.list_tags()? } else { Vec::new() },
-            tasks: if sel.tasks { self.list_tasks()? } else { Vec::new() },
-            time_entries: if sel.time_entries { self.list_time_entries()? } else { Vec::new() },
+            projects: if sel.projects {
+                self.list_projects()?
+            } else {
+                Vec::new()
+            },
+            tags: if sel.tags {
+                self.list_tags()?
+            } else {
+                Vec::new()
+            },
+            tasks: if sel.tasks {
+                self.list_tasks()?
+            } else {
+                Vec::new()
+            },
+            time_entries: if sel.time_entries {
+                self.list_time_entries()?
+            } else {
+                Vec::new()
+            },
         })
     }
 
@@ -658,7 +719,9 @@ mod tests {
     fn task_project_round_trip() {
         let db = Db::open_in_memory().expect("open in-memory db");
 
-        let project = db.create_project("Inbox", Some("#3b82f6"), Some("inbox")).unwrap();
+        let project = db
+            .create_project("Inbox", Some("#3b82f6"), Some("inbox"))
+            .unwrap();
         assert_eq!(project.name, "Inbox");
         assert_eq!(project.color.as_deref(), Some("#3b82f6"));
 

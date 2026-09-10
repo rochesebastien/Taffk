@@ -14,7 +14,7 @@ where
     Deserialize::deserialize(de).map(Some)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskDto {
     pub id: String,
@@ -40,7 +40,7 @@ pub struct TaskDto {
     pub tag_ids: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectDto {
     pub id: String,
@@ -53,7 +53,7 @@ pub struct ProjectDto {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TagDto {
     pub id: String,
@@ -62,7 +62,7 @@ pub struct TagDto {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeEntryDto {
     pub id: String,
@@ -108,7 +108,7 @@ pub struct DataStats {
     pub time_entries: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewTask {
     pub title: String,
@@ -132,7 +132,7 @@ pub struct NewTask {
 /// `None` => key not sent, leave column untouched.
 /// `Some(inner)` => key sent; for nullable columns `inner` itself is `Option`,
 /// so an explicit JSON `null` clears the column.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskPatch {
     pub id: String,

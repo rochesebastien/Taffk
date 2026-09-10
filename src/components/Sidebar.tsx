@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
+  BookOpen,
   CalendarCheck,
   CalendarDays,
   Check,
@@ -147,6 +148,7 @@ export function Sidebar() {
   const tags = useStore((s) => s.tags);
   const setView = useStore((s) => s.setView);
   const openSettings = useStore((s) => s.openSettings);
+  const openDocs = useStore((s) => s.openDocs);
   const openProject = useStore((s) => s.openProject);
   const openSpotlight = useStore((s) => s.openSpotlight);
   const openSearch = useStore((s) => s.openSearch);
@@ -529,6 +531,13 @@ export function Sidebar() {
             <span className="min-w-0 flex-1 truncate">{profileName.trim() || 'Profil'}</span>
           </div>
         )}
+        <NavItem
+          icon={BookOpen}
+          label="Documentation"
+          active={view === 'docs'}
+          collapsed={collapsed}
+          onClick={() => openDocs()}
+        />
         <NavItem
           icon={Settings}
           label="Paramètres"

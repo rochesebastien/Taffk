@@ -1,13 +1,39 @@
 mod commands;
-mod db;
-mod models;
 
-use crate::db::Db;
 use std::str::FromStr;
+use std::time::Duration;
+use taffk_core::Db;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+/// Event the frontend already listens to for cross-window writes (see
+/// `onRemoteDataChanged` in `src/lib/api.ts`). Reused for writes coming from
+/// other processes: the CLI and the MCP server share the SQLite file.
+const DATA_CHANGED_EVENT: &str = "taffk://data-changed";
+
+#[derive(Clone, serde::Serialize)]
+struct DataChanged {
+    source: &'static str,
+}
+
+/// Notice writes from other processes by polling SQLite's `data_version`,
+/// which only moves when *another* connection commits. Cheap enough to run
+/// every second for the app's lifetime, and it needs no file watcher.
+fn watch_external_writes(app: AppHandle, db: Db) {
+    std::thread::spawn(move || {
+        let mut last = db.data_version().ok();
+        loop {
+            std::thread::sleep(Duration::from_millis(1000));
+            let current = db.data_version().ok();
+            if current.is_some() && current != last {
+                last = current;
+                let _ = app.emit(DATA_CHANGED_EVENT, DataChanged { source: "external" });
+            }
+        }
+    });
+}
 
 /// Whether this build can't replace itself in place, so the frontend falls back
 /// to opening the release page instead of installing the update.
@@ -105,8 +131,9 @@ pub fn run() {
         .setup(move |app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let db = Db::open(&data_dir.join("taffk.db")).map_err(|e| e.to_string())?;
-            app.manage(db);
+            let db = Db::open(&data_dir.join(taffk_core::paths::DB_FILE_NAME)).map_err(|e| e.to_string())?;
+            app.manage(db.clone());
+            watch_external_writes(app.handle().clone(), db);
 
             // Non-fatal: another app may already own the accelerator. The tray
             // and window still work without it, so never crash the launch here.

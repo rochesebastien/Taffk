@@ -7,6 +7,8 @@ import { CalendarView } from './components/views/CalendarView';
 import { TimeView } from './components/views/TimeView';
 import { TagsView } from './components/views/TagsView';
 import { SettingsView } from './components/views/SettingsView';
+import { DocsView } from './components/views/DocsView';
+import { DocsSidebar } from './components/DocsSidebar';
 import { TaskDetail } from './components/tasks/TaskDetail';
 import { TagPanel } from './components/tasks/TagPanel';
 import { TaskSpotlight } from './components/tasks/TaskSpotlight';
@@ -29,6 +31,7 @@ export default function App() {
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
   const closeSettings = useStore((s) => s.closeSettings);
+  const closeDocs = useStore((s) => s.closeDocs);
   const selectedTaskId = useStore((s) => s.selectedTaskId);
   const selectTask = useStore((s) => s.selectTask);
   const selectedTask = useStore((s) => s.tasks.find((t) => t.id === s.selectedTaskId) ?? null);
@@ -67,6 +70,7 @@ export default function App() {
         else if (selectedTaskId) selectTask(null);
         else if (selectedTagId) selectTag(null);
         else if (view === 'settings') closeSettings();
+        else if (view === 'docs') closeDocs();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
@@ -97,12 +101,12 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [helpOpen, searchOpen, closeSearch, selectedTaskId, selectTask, selectedTagId, selectTag, view, closeSettings, setView, openSpotlight, openSearch, quickAddShortcut, focusLocked]);
+  }, [helpOpen, searchOpen, closeSearch, selectedTaskId, selectTask, selectedTagId, selectTag, view, closeSettings, closeDocs, setView, openSpotlight, openSearch, quickAddShortcut, focusLocked]);
 
   return (
     <TooltipProvider delayDuration={300}>
       <div className="relative flex h-screen w-screen overflow-hidden bg-background text-foreground">
-        {view === 'settings' ? <SettingsSidebar /> : <Sidebar />}
+        {view === 'settings' ? <SettingsSidebar /> : view === 'docs' ? <DocsSidebar /> : <Sidebar />}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {!loaded ? (
             <div className="grid h-full place-items-center text-muted-foreground/60">…</div>
@@ -116,6 +120,8 @@ export default function App() {
             <TagsView />
           ) : view === 'settings' ? (
             <SettingsView />
+          ) : view === 'docs' ? (
+            <DocsView />
           ) : (
             <TaskListView />
           )}

@@ -27,6 +27,9 @@ file owned by the Rust backend.
   `oneDark`) for task notes; `markdown-it` for the preview.
 - **Calendar**: `react-big-calendar` + the drag-and-drop addon (week/day views,
   drag-to-move and resize-to-extend events), localized with `date-fns` (fr).
+- **CLI + MCP**: `taffk-cli` (clap) shares the data layer with the app through
+  the `taffk-core` crate and embeds a stdio MCP server (`taffk-cli mcp`,
+  hand-rolled JSON-RPC, no async runtime). Same SQLite file as the app.
 
 ## Where we are
 
@@ -42,20 +45,38 @@ Migration + refactor complete. Landed slices:
   resize-to-extend, click-empty-slot to create, click event to open detail.
 - [x] **UI refonte** — Tailwind v4 + shadcn/ui, flat light/dark theme (Notion/Codex),
   centered task cards. `app.css` removed; tokens live in `index.css`.
+- [x] **CLI, MCP & docs** — `taffk-core` crate (db + models + shared `ops`),
+  `taffk-cli` binary (terminal + `--json` + `taffk-cli mcp` server), in-app
+  Documentation view (`docs/*.md` rendered from markdown), `skills/taffk/SKILL.md`.
 
 Roadmap items beyond this live in `/tasks/list.md` and the issue tracker.
 
 ## Architecture
 
 ```
-src-tauri/src/
-  main.rs       — windows_subsystem flag + taffk_lib::run()
-  lib.rs        — Tauri setup: opens the DB in app_data_dir, manages Db state,
-                  tray, global shortcut (Ctrl+Shift+Space), hide-on-close
-  db.rs         — Db { Arc<Mutex<Connection>> }, schema bootstrap, all queries,
-                  unit tests (open_in_memory helper)
-  models.rs     — serde DTOs (camelCase) + input structs (NewTask, TaskPatch)
-  commands.rs   — #[tauri::command] CRUD surface (tasks/projects/tags/time)
+src-tauri/                — Cargo workspace root (app crate + crates/*)
+  src/
+    main.rs       — windows_subsystem flag + taffk_lib::run()
+    lib.rs        — Tauri setup: opens the DB in app_data_dir, manages Db state,
+                    tray, global shortcut (Ctrl+Shift+Space), hide-on-close,
+                    polls `PRAGMA data_version` to notice CLI/MCP writes
+    commands.rs   — #[tauri::command] CRUD surface (tasks/projects/tags/time)
+  crates/taffk-core/src/  — shared data layer (no Tauri dependency)
+    db.rs         — Db { Arc<Mutex<Connection>> }, schema bootstrap, all queries,
+                    unit tests (open_in_memory helper)
+    models.rs     — serde DTOs (camelCase) + input structs (NewTask, TaskPatch)
+    ops.rs        — rules shared by CLI + MCP: handle resolution (id prefix /
+                    name / alias / title), `#tag @projet` parsing, done/status
+                    sync with subtask cascade, filters, resolved views
+    paths.rs      — platform DB path mirroring Tauri's app_data_dir, TAFFK_DB
+  crates/taffk-cli/src/   — `taffk-cli` binary
+    main.rs       — clap commands (task/project/tag/time/stats/export/import/
+                    db/mcp/skill), `--json`, embeds skills/taffk/SKILL.md
+    mcp.rs        — stdio MCP server: initialize / tools/list / tools/call
+    render.rs     — human output
+docs/                     — user docs (markdown), rendered in-app by DocsView
+  overview.md · agents.md · cli.md · skill.md
+skills/taffk/SKILL.md     — agent skill, installed by `taffk-cli skill install`
 src/
   App.tsx           — shell (sidebar + main, flat), view switch, detail drawer, Esc
   index.css         — Tailwind entry: @theme tokens + shadcn palette (:root + .dark,
@@ -76,6 +97,9 @@ src/
                       dropdown-menu, scroll-area, separator, tooltip, badge, progress)
     Sidebar / TaskListView / TaskItem / QuickAdd / TaskDetail / MarkdownNotes /
     KanbanBoard / CalendarView / PomodoroWidget / KeyboardHelp
+    DocsSidebar / views/DocsView — Documentation view: `docs/*.md?raw` →
+                      `renderDocs()` (heading ids + "on this page" rail),
+                      copy buttons on code blocks, `.md` links map to sections
     markdown.css        — rendered-markdown (.preview) prose, themed via shadcn tokens
     calendar-theme.css  — react-big-calendar overrides, themed via shadcn tokens
 ```
@@ -116,14 +140,27 @@ npm install                    # first time only
 npm run tauri dev              # dev (cold Rust build ~5 min, then incremental)
 npm run check                  # tsc --noEmit
 npm run build                  # tsc + vite build
-cd src-tauri && cargo check    # Rust-only fast check
-cd src-tauri && cargo test     # Rust unit tests
+cd src-tauri && cargo check    # Rust-only fast check (needs Tauri libs)
+cd src-tauri && cargo test --workspace          # all Rust unit tests
+cd src-tauri && cargo test -p taffk-core -p taffk-cli   # no Tauri libs needed
+cd src-tauri && cargo run -p taffk-cli -- --db /tmp/t.db task list
 ```
 
 ## Gotchas
 
 - **`cargo check` needs the Tauri Linux libs** (webkit2gtk-4.1, gtk-3, libsoup-3,
   librsvg2, libayatana-appindicator3) on Linux. `tauri dev` also needs a display.
+  `taffk-core` and `taffk-cli` build without them (`-p`), so the data layer and
+  the CLI/MCP can be tested anywhere.
+- **The CLI binary is `taffk-cli`**, not `taffk`: the app binary already owns
+  that name in `target/`, and a GUI-subsystem exe has no console for MCP stdio.
+- **External writes**: the app notices CLI/MCP commits by polling SQLite's
+  `data_version` (1s) and emits the same `taffk://data-changed` event the sticky
+  windows use, so the store reloads. `busy_timeout` is set so concurrent access
+  waits instead of failing.
+- **Docs are markdown** imported with `?raw` from `docs/` (outside `src/`, fine
+  for Vite). The first `# Title` is hidden in-app (shown in the header) so the
+  files still read well on GitHub. Cross-page links are `cli.md#anchor`.
 - **DB location**: `app_data_dir()/taffk.db`, created in `.setup()` before
   `app.manage(db)`. Not in the repo.
 - **Tauri 2 plugin permissions**: any plugin (e.g. `global-shortcut`) needs an
@@ -151,4 +188,7 @@ cd src-tauri && cargo test     # Rust unit tests
 - Don't add cloud sync, login, or telemetry.
 - Don't add a config file for behavior tuning until there's a real second need.
 - Don't bypass `src/lib/api.ts` to call `invoke` directly from components.
+- Don't let `ops.rs` and `store.ts` drift: quick-add parsing, project/tag
+  reuse and the done/status cascade exist in both (Rust for CLI/MCP, TS for
+  the app). Change one, change the other.
 - Don't set `done` without `status` (or vice-versa) — go through the store actions.
