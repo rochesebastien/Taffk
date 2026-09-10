@@ -7,6 +7,8 @@ website/
   index.html   — structure + contenu (FR)
   styles.css   — design system (tokens, thème clair/sombre, responsive)
   app.js       — thème persisté, reveal au scroll, démo de saisie #tag @projet
+  docs/        — documentation (générée : ne pas éditer à la main)
+  build-docs.mjs — génère docs/*.html depuis ../docs/*.md (`npm run docs:build`)
 ```
 
 ## Aperçu local

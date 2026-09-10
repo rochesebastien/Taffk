@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
+    "docs:build": "node website/build-docs.mjs",
     "tauri": "tauri",
     "sign:win": "pwsh -File src-tauri/scripts/sign-windows.ps1"
   },

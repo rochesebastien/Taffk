@@ -1,12 +1,12 @@
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
-use crate::db::Db;
-use crate::models::{
+use taffk_core::models::{
     Backup, BackupSelection, DataStats, NewTask, ProjectDto, TagDto, TaskDto, TaskPatch,
     TimeEntryDto,
 };
+use taffk_core::Db;
 
-fn map_err(e: rusqlite::Error) -> String {
+fn map_err(e: taffk_core::rusqlite::Error) -> String {
     e.to_string()
 }
 
@@ -153,7 +153,7 @@ pub fn time_today(db: State<'_, Db>) -> Result<i64, String> {
 fn db_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map(|d| d.join("taffk.db"))
+        .map(|d| d.join(taffk_core::paths::DB_FILE_NAME))
         .map_err(|e| e.to_string())
 }
 

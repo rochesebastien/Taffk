@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
+  BookOpen,
   CalendarCheck,
   CalendarDays,
   Check,
@@ -53,7 +54,10 @@ import { PanelResizeHandle } from './PanelResizeHandle';
 import { ProjectDialog } from './projects/ProjectDialog';
 import { Kbd } from './ui/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { type Project } from '../lib/api';
+import { openExternal, type Project } from '../lib/api';
+
+/** Doc hébergée sur le site vitrine (générée depuis `docs/*.md`). */
+export const DOCS_URL = 'https://taffk.vercel.app/docs/';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -529,6 +533,14 @@ export function Sidebar() {
             <span className="min-w-0 flex-1 truncate">{profileName.trim() || 'Profil'}</span>
           </div>
         )}
+        <NavItem
+          icon={BookOpen}
+          label="Documentation"
+          active={false}
+          collapsed={collapsed}
+          external
+          onClick={() => void openExternal(DOCS_URL)}
+        />
         <NavItem
           icon={Settings}
           label="Paramètres"

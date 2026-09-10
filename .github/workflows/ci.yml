@@ -2,7 +2,8 @@ name: CI
 
 # Vérifs rapides sur chaque push vers main et chaque pull request :
 #   - frontend : typecheck (tsc) + build Vite
-#   - backend  : tests unitaires Rust (cargo test)
+#   - backend  : tests unitaires Rust de tout le workspace (app, taffk-core,
+#                taffk-cli) + build de la CLI
 
 on:
   push:
@@ -40,6 +41,9 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-      - name: cargo test
+      - name: cargo test (workspace)
         working-directory: src-tauri
-        run: cargo test
+        run: cargo test --workspace
+      - name: cargo build taffk-cli
+        working-directory: src-tauri
+        run: cargo build -p taffk-cli

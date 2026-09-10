@@ -1,0 +1,19 @@
+[package]
+name = "taffk-cli"
+description = "Command-line interface and MCP server for Taffk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "taffk-cli"
+path = "src/main.rs"
+
+[dependencies]
+taffk-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+dirs = "6"

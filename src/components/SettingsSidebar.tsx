@@ -1,6 +1,7 @@
 import {
   Archive,
   ArrowLeft,
+  BookOpen,
   Command,
   Database,
   Eclipse,
@@ -27,7 +28,7 @@ import {
   SIDEBAR_MIN,
 } from '../lib/sidebar';
 import { cn } from '../lib/utils';
-import { NavItem } from './Sidebar';
+import { DOCS_URL, NavItem } from './Sidebar';
 import { PanelResizeHandle } from './PanelResizeHandle';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import logoDark from '../assets/logo_navbar_dark.svg';
@@ -45,7 +46,8 @@ const SECTIONS: { id: SettingsSection; icon: LucideIcon; label: string }[] = [
 ];
 
 const LINKS: { icon: LucideIcon; label: string; url: string }[] = [
-    {
+  { icon: BookOpen, label: 'Documentation', url: DOCS_URL },
+  {
     icon: MessageCircleQuestionMark,
     label: 'Signaler un bug',
     url: 'https://github.com/rochesebastien/Taffk/issues',

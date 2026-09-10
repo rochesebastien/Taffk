@@ -154,4 +154,25 @@
       { passive: true }
     );
   }
+
+  /* ── Documentation : bouton copier sur les blocs de code ─────────────── */
+  var blocks = document.querySelectorAll('.docs-content pre');
+  blocks.forEach(function (pre) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'docs-copy';
+    button.textContent = 'Copier';
+    button.addEventListener('click', function () {
+      var code = pre.querySelector('code');
+      var text = (code ? code.textContent : pre.textContent).replace(/\s+$/, '');
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText(text).then(function () {
+        button.textContent = 'Copié';
+        setTimeout(function () {
+          button.textContent = 'Copier';
+        }, 1500);
+      });
+    });
+    pre.appendChild(button);
+  });
 })();

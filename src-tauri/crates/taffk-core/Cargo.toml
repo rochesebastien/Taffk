@@ -1,0 +1,15 @@
+[package]
+name = "taffk-core"
+description = "Taffk data layer: SQLite schema, queries and shared operations"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+rusqlite = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+dirs = "6"

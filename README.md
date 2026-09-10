@@ -28,6 +28,12 @@ planner, and track focus time with a built-in Pomodoro timer.
 - **Global hotkey + tray** — summon with `Ctrl+Shift+Space`; tray with
   Show / Hide / Quit. Closing the window hides it instead of quitting.
 - **Dark / light theme** — single brand-blue accent, persisted locally.
+- **CLI + MCP server** — `taffk-cli` drives the same SQLite file from a
+  terminal (`taffk-cli task add "Relire le contrat #urgent @Client"`, `--json`
+  for scripts) and `taffk-cli mcp` exposes it to AI agents (Claude Code, Claude
+  Desktop, Cursor, Codex…) over the Model Context Protocol. A `SKILL.md`
+  teaches agents the conventions. Docs: [taffk.vercel.app/docs](https://taffk.vercel.app/docs/)
+  (source in `docs/`).
 
 ## Stack
 
@@ -38,8 +44,9 @@ planner, and track focus time with a built-in Pomodoro timer.
   (bundled), owned by the Rust backend and exposed through Tauri IPC commands.
 - **Editor / preview** — CodeMirror 6 (`@uiw/react-codemirror`) + `markdown-it`.
 
-The Rust side owns the database and business logic; the React frontend talks to
-it exclusively through the typed wrappers in `src/lib/api.ts`. Running outside
+The Rust side owns the database and business logic (`taffk-core` crate, shared
+by the app and `taffk-cli`); the React frontend talks to it exclusively through
+the typed wrappers in `src/lib/api.ts`. Running outside
 the Tauri shell (a plain browser) transparently falls back to an in-memory mock
 backend, so the UI can be previewed without the desktop runtime.
 
@@ -55,9 +62,13 @@ Other commands:
 ```sh
 npm run check                 # tsc --noEmit (frontend typecheck)
 npm run build                 # typecheck + vite build
-cd src-tauri && cargo check   # Rust-only fast check
-cd src-tauri && cargo test    # Rust unit tests (db round-trips)
+cd src-tauri && cargo check              # Rust-only fast check
+cd src-tauri && cargo test --workspace   # Rust unit tests (db, ops)
+cd src-tauri && cargo run -p taffk-cli -- --help
 ```
+
+To install the CLI from source: `cargo install --git https://github.com/rochesebastien/Taffk taffk-cli`.
+Prebuilt binaries ship with each release.
 
 The SQLite database lives in the platform app-data directory (`taffk.db`),
 created automatically on first run.

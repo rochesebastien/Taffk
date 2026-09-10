@@ -8,10 +8,12 @@ name: Release
 #   - Lancement manuel (Actions → Release → Run workflow) : le tag est dérivé de
 #     la version dans `tauri.conf.json` et tauri-action crée le tag.
 #
-# La release contient quatre manières de récupérer Taffk :
+# La release contient quatre manières de récupérer Taffk, plus la CLI :
 #   - Installateur Windows   : `Taffk_<version>_x64-setup.exe` (NSIS)
 #   - Exécutable portable    : `Taffk_<version>_x64_portable.exe` (sans installateur)
 #   - Image disque macOS     : `Taffk_<version>_universal.dmg` (Intel + Apple Silicon)
+#   - CLI + serveur MCP      : `taffk-cli_<version>_x64.exe` (Windows),
+#                              `taffk-cli_<version>_universal` (macOS)
 #   - Code source            : « Source code (zip / tar.gz) », ajouté par GitHub.
 #
 # Les deux jobs (Windows et macOS) publient dans la même release ;
@@ -131,6 +133,7 @@ jobs:
             | **Installateur Windows** | `Taffk_*_x64-setup.exe` | Installation classique (raccourcis, désinstalleur). |
             | **Portable Windows** | `Taffk_*_x64_portable.exe` | Aucun installateur : lancez le `.exe` directement, où vous voulez. |
             | **macOS** | `Taffk_*_universal.dmg` | Intel et Apple Silicon. Ouvrez le `.dmg` et glissez Taffk où vous voulez. |
+            | **CLI + serveur MCP** | `taffk-cli_*_x64.exe` / `taffk-cli_*_universal` | Optionnel : pilotez Taffk depuis le terminal ou un agent IA ([documentation](https://taffk.vercel.app/docs/)). |
             | **Code source** | *Source code* (zip / tar.gz) ci-dessous | Compiler vous-même. |
 
             > **macOS** : l'application n'est pas notariée. Au premier lancement,
@@ -141,6 +144,29 @@ jobs:
             (Les fichiers `latest.json` et `*.sig` servent à cette mise à jour
             intégrée — pas besoin de les télécharger.)
 
+      # La CLI (qui embarque le serveur MCP) est un binaire séparé de l'app :
+      # elle n'a pas de fenêtre, et l'exe de l'app n'a pas de console.
+      - name: Build taffk-cli (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          cargo build --release -p taffk-cli --manifest-path src-tauri/Cargo.toml
+          $version = '${{ needs.check.outputs.tag }}' -replace '^v', ''
+          Copy-Item 'src-tauri/target/release/taffk-cli.exe' "taffk-cli_${version}_x64.exe"
+          "CLI_BIN=taffk-cli_${version}_x64.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build taffk-cli (macOS universal)
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        run: |
+          cargo build --release -p taffk-cli --manifest-path src-tauri/Cargo.toml --target aarch64-apple-darwin
+          cargo build --release -p taffk-cli --manifest-path src-tauri/Cargo.toml --target x86_64-apple-darwin
+          version="${{ needs.check.outputs.tag }}"; version="${version#v}"
+          lipo -create -output "taffk-cli_${version}_universal" \
+            src-tauri/target/aarch64-apple-darwin/release/taffk-cli \
+            src-tauri/target/x86_64-apple-darwin/release/taffk-cli
+          echo "CLI_BIN=taffk-cli_${version}_universal" >> "$GITHUB_ENV"
+
       - name: Stage portable executable
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -150,10 +176,11 @@ jobs:
           Copy-Item 'src-tauri/target/release/taffk.exe' $dest
           "PORTABLE_EXE=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Attach portable executable to the release
-        if: matrix.platform == 'windows-latest'
+      - name: Attach portable executable and CLI to the release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check.outputs.tag }}
-          files: ${{ env.PORTABLE_EXE }}
+          files: |
+            ${{ env.PORTABLE_EXE }}
+            ${{ env.CLI_BIN }}
           fail_on_unmatched_files: true
