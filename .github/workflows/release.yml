@@ -176,11 +176,20 @@ jobs:
           Copy-Item 'src-tauri/target/release/taffk.exe' $dest
           "PORTABLE_EXE=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
+      # `gh release upload` ne touche qu'aux assets. softprops/action-gh-release
+      # (>= 2.5) repasse d'abord la release en brouillon via l'API, ce que GitHub
+      # refuse (403) sur une release déjà publiée — cas de toute republication.
       - name: Attach portable executable and CLI to the release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.check.outputs.tag }}
-          files: |
-            ${{ env.PORTABLE_EXE }}
-            ${{ env.CLI_BIN }}
-          fail_on_unmatched_files: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          files=("$CLI_BIN")
+          if [ -n "$PORTABLE_EXE" ]; then
+            files+=("$PORTABLE_EXE")
+          fi
+          for f in "${files[@]}"; do
+            test -f "$f" || { echo "::error::Missing artifact: $f"; exit 1; }
+          done
+          gh release upload "$TAG" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
